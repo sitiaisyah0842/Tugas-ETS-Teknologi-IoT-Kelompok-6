@@ -12,7 +12,6 @@ Anggota  :
 
 Proyek ini bertujuan untuk merancang dan membangun **sistem IoT monitoring jarak** berbasis **sensor HC-SR04** dan **mikrokontroler ESP32-S3**. Sistem ini menggunakan **bahasa pemrograman Rust** di atas **sistem operasi Ubuntu**, dengan integrasi ke **ThingsBoard IoT Platform** untuk visualisasi data secara real-time, serta mendukung fitur **Over-The-Air (OTA)** update untuk pembaruan firmware jarak jauh.
 
-
 ## Langkah-langkah Implementasi
 
 ### 1. Persiapan Hardware dan Software
@@ -81,5 +80,21 @@ sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data >
 ## Diagram Sistem
 
 <p align="center">
-  <img src="wiring.jpg" alt="Wiring Diagram" width="300">
+  <img src="wiring.jpg" alt="Wiring Diagram" width="300"><br>
+  <em>Gambar 1.0 Diagram Wiring ESP32-S3 dan Sensor HC-SR04</em>
 </p>
+
+<p align="center">
+  <img src="Diagram Alir Sistem.png" alt="Diagram Alir Sistem" width="200"><br>
+  <em>Gambar 1.1 Diagram Alir Sistem</em>
+</p>
+
+<p align="center">
+  <img src="Diagram Arsitektur.png" alt="Diagram Arsitektur" width="500"><br>
+  <em>Gambar 1.2 Diagram Arsitektur</em>
+</p>
+
+## Pembahasan Hasil
+
+## Kesimpulan
+
