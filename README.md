@@ -1,4 +1,4 @@
-# Tugas-ETS-Teknologi-IoT-Kelompok-6
+# TUGAS ETS TEKNOLOGI IOT
 Kelompok : 6
 
 Anggota  : 
