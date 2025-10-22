@@ -77,3 +77,5 @@ Buat file buildota.sh dengan cargo build –release, flash.sh dengan espflash fl
 ### 7. Pengujian Sistem
 Uji fungsionalitas pembacaan sensor (akurasi >95% via serial monitor), koneksi MQTT/WiFi (update real-time di ThingsBoard), dan OTA (update .bin versi 2 tanpa kabel via ./flash.sh atau web server) selama 24 jam
 sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data > Periksa OTA > Update Selesai > Restart). Catat error dan iterasi di tabel sambil monitor anomali.
+
+## Diagram Sistem
