@@ -79,3 +79,7 @@ Uji fungsionalitas pembacaan sensor (akurasi >95% via serial monitor), koneksi M
 sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data > Periksa OTA > Update Selesai > Restart). Catat error dan iterasi di tabel sambil monitor anomali.
 
 ## Diagram Sistem
+
+<p align="center">
+  <img src="wiring.jpg" alt="Wiring Diagram" width="300">
+</p>
