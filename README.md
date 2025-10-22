@@ -4,7 +4,7 @@ Kelompok : 6
 Anggota  : 
 - Siti Aisyah       (2042231008)
 
-- Shelma Nur Sabila (2042231022
+- Shelma Nur Sabila (2042231022)
 
 # IoT Distance Monitoring System (HC-SR04, ESP32-S3, Rust, ThingsBoard, OTA)
 
