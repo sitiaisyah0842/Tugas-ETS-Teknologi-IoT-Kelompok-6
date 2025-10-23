@@ -91,7 +91,7 @@ sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data >
 </p>
 
 <p align="center">
-  <img src="Diagram Arsitektur.png" alt="Diagram Arsitektur" width="500"><br>
+  <img src="Diagram Arsitektur.png" alt="Diagram Arsitektur" width="200"><br>
   <em>Gambar 1.2 Diagram Arsitektur</em>
 </p>
 
