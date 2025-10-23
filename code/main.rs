@@ -1,0 +1,955 @@
+#![no_std]
+#![no_main]
+
+use esp_idf_sys::*;
+use esp_idf_hal::{delay::{Delay, Ets}, gpio::*, peripherals::Peripherals};
+use esp_idf_svc::{
+    eventloop::EspSystemEventLoop,
+    nvs::EspDefaultNvsPartition,
+    wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configuration, EspWifi},
+    log::EspLogger,
+    sntp::{EspSntp, SyncStatus},
+};
+use log::{info, error};
+use anyhow::{Result, anyhow};
+use serde_json::{json, Value};
+use alloc::{boxed::Box, string::{String, ToString}, ffi::CString, format, vec::Vec};
+use core::ffi::c_void;
+use sha2::{Digest, Sha256};
+use heapless::String as HeaplessString;
+extern crate alloc;
+
+// Tambahan untuk RTC/time
+use esp_idf_sys::{gettimeofday, timeval, localtime_r, tm, setenv, tzset};
+
+// OTA Constants
+const OTA_REQUEST_TOPIC: &str = "v1/devices/me/attributes/request/";
+const OTA_RESPONSE_TOPIC: &str = "v1/devices/me/attributes/response/";
+const OTA_FIRMWARE_REQUEST_TOPIC: &str = "v2/fw/request";
+const OTA_FIRMWARE_RESPONSE_TOPIC: &str = "v2/fw/response";
+const OTA_TELEMETRY_TOPIC: &str = "v1/devices/me/telemetry";
+
+// OTA Shared Attributes
+const FW_TITLE_ATTR: &str = "fw_title";
+const FW_VERSION_ATTR: &str = "fw_version";
+const FW_SIZE_ATTR: &str = "fw_size";
+const FW_CHECKSUM_ATTR: &str = "fw_checksum";
+const FW_CHECKSUM_ALG_ATTR: &str = "fw_checksum_algorithm";
+const FW_STATE_ATTR: &str = "fw_state";
+
+// Structure to represent distance in centimeters
+#[derive(Debug)]
+struct Distance(f32);
+
+impl Distance {
+    pub fn as_f32(&self) -> f32 {
+        self.0
+    }
+}
+
+#[inline(always)]
+fn ms_to_ticks(ms: u32) -> u32 {
+    (ms as u64 * configTICK_RATE_HZ as u64 / 1000) as u32
+}
+
+#[derive(PartialEq)]
+enum OtaState {
+    Idle,
+    Downloading,
+    Downloaded,
+    Verifying,
+    Updating,
+    Updated,
+    Failed(String),
+}
+
+struct OtaManager {
+    current_fw_title: String,
+    current_fw_version: String,
+    fw_title: Option<String>,
+    fw_version: Option<String>,
+    fw_size: Option<u32>,
+    fw_checksum: Option<String>,
+    fw_checksum_algorithm: Option<String>,
+    ota_state: OtaState,
+    request_id: u32,
+    firmware_request_id: u32,
+    current_chunk: u32,
+    ota_handle: esp_ota_handle_t,
+    ota_partition: *const esp_partition_t,
+    received_size: usize,
+    sha256_hasher: Sha256,
+    partial_firmware_data: Vec<u8>,
+}
+
+impl OtaManager {
+    fn new() -> Self {
+        unsafe {
+            let otadata_partition = esp_partition_find_first(
+                esp_partition_type_t_ESP_PARTITION_TYPE_DATA,
+                esp_partition_subtype_t_ESP_PARTITION_SUBTYPE_DATA_OTA,
+                core::ptr::null(),
+            );
+            if !otadata_partition.is_null() {
+                info!("Found otadata partition at {:p}", otadata_partition);
+            } else {
+                error!("No otadata partition found");
+            }
+
+            let mut ota_partitions_found = 0;
+            for subtype in &[
+                esp_partition_subtype_t_ESP_PARTITION_SUBTYPE_APP_OTA_0,
+                esp_partition_subtype_t_ESP_PARTITION_SUBTYPE_APP_OTA_1,
+            ] {
+                let mut iterator = esp_partition_find(
+                    esp_partition_type_t_ESP_PARTITION_TYPE_APP,
+                    *subtype,
+                    core::ptr::null(),
+                );
+                while !iterator.is_null() {
+                    let partition = esp_partition_get(iterator);
+                    let label = core::ffi::CStr::from_ptr((*partition).label.as_ptr())
+                        .to_str()
+                        .unwrap_or("unknown");
+                    info!(
+                        "Found OTA partition: {}, subtype: {:?}, address: 0x{:x}, size: 0x{:x}",
+                        label, *subtype, (*partition).address, (*partition).size
+                    );
+                    ota_partitions_found += 1;
+                    iterator = esp_partition_next(iterator);
+                }
+                esp_partition_iterator_release(iterator);
+            }
+            if ota_partitions_found < 2 {
+                error!(
+                    "Insufficient OTA partitions found: {}. Need at least 2 for OTA.",
+                    ota_partitions_found
+                );
+            } else {
+                info!("Found {} OTA partitions, sufficient for OTA", ota_partitions_found);
+            }
+
+            let running_partition = esp_ota_get_running_partition();
+            if !running_partition.is_null() {
+                let label = core::ffi::CStr::from_ptr((*running_partition).label.as_ptr())
+                    .to_str()
+                    .unwrap_or("unknown");
+                info!(
+                    "Current running partition: {}, address: 0x{:x}, size: 0x{:x}",
+                    label, (*running_partition).address, (*running_partition).size
+                );
+            } else {
+                error!("No running partition detected");
+            }
+        }
+
+        Self {
+            current_fw_title: "Water Level Sensor".to_string(),
+            current_fw_version: "V1.0".to_string(),
+            fw_title: None,
+            fw_version: None,
+            fw_size: None,
+            fw_checksum: None,
+            fw_checksum_algorithm: None,
+            ota_state: OtaState::Idle,
+            request_id: 0,
+            firmware_request_id: 0,
+            current_chunk: 0,
+            ota_handle: 0,
+            ota_partition: core::ptr::null(),
+            received_size: 0,
+            sha256_hasher: Sha256::new(),
+            partial_firmware_data: Vec::new(),
+        }
+    }
+
+    fn handle_shared_attributes(&mut self, attributes: &str, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        let attrs: Value = serde_json::from_str(attributes)?;
+        info!("Raw attributes received: {}", attributes);
+
+        let shared_attrs = attrs
+            .get("shared")
+            .ok_or_else(|| anyhow!("Missing 'shared' object in attributes"))?;
+
+        if let Some(fw_title) = shared_attrs.get(FW_TITLE_ATTR).and_then(|v| v.as_str()) {
+            self.fw_title = Some(fw_title.trim().to_string());
+            info!("Received fw_title: '{}'", fw_title);
+        }
+        if let Some(fw_version) = shared_attrs.get(FW_VERSION_ATTR).and_then(|v| v.as_str()) {
+            self.fw_version = Some(fw_version.trim().to_string());
+            info!("Received fw_version: '{}'", fw_version);
+        }
+        if let Some(fw_size) = shared_attrs.get(FW_SIZE_ATTR).and_then(|v| v.as_u64()) {
+            self.fw_size = Some(fw_size as u32);
+            info!("Received fw_size: {}", fw_size);
+        }
+        if let Some(fw_checksum) = shared_attrs.get(FW_CHECKSUM_ATTR).and_then(|v| v.as_str()) {
+            self.fw_checksum = Some(fw_checksum.trim().to_string());
+            info!("Received fw_checksum: '{}'", fw_checksum);
+        }
+        if let Some(fw_checksum_alg) = shared_attrs
+            .get(FW_CHECKSUM_ALG_ATTR)
+            .and_then(|v| v.as_str())
+        {
+            self.fw_checksum_algorithm = Some(fw_checksum_alg.trim().to_string());
+            info!("Received fw_checksum_algorithm: '{}'", fw_checksum_alg);
+        }
+
+        let mut result = Ok(());
+        if let (Some(fw_title), Some(fw_version)) = (&self.fw_title, &self.fw_version) {
+            info!(
+                "Comparing fw_title: '{}' vs '{}', fw_version: '{}' vs '{}'",
+                fw_title, self.current_fw_title, fw_version, self.current_fw_version
+            );
+            if fw_title.trim() != self.current_fw_title.trim()
+                || fw_version.trim() != self.current_fw_version.trim()
+            {
+                info!("New firmware available: {} {}", fw_title, fw_version);
+                self.ota_state = OtaState::Downloading;
+                self.firmware_request_id += 1;
+                self.current_chunk = 0;
+                self.received_size = 0;
+                self.sha256_hasher = Sha256::new();
+                unsafe {
+                    self.ota_partition = esp_ota_get_next_update_partition(core::ptr::null());
+                    if self.ota_partition.is_null() {
+                        error!("esp_ota_get_next_update_partition failed. Attempting manual partition selection...");
+                        let running_partition = esp_ota_get_running_partition();
+                        if !running_partition.is_null() {
+                            let label = core::ffi::CStr::from_ptr((*running_partition).label.as_ptr())
+                                .to_str()
+                                .unwrap_or("unknown");
+                            info!("Running partition: {}, address: 0x{:x}", label, (*running_partition).address);
+                        } else {
+                            error!("No running partition detected");
+                        }
+
+                        for subtype in &[
+                            esp_partition_subtype_t_ESP_PARTITION_SUBTYPE_APP_OTA_0,
+                            esp_partition_subtype_t_ESP_PARTITION_SUBTYPE_APP_OTA_1,
+                        ] {
+                            let mut iterator = esp_partition_find(
+                                esp_partition_type_t_ESP_PARTITION_TYPE_APP,
+                                *subtype,
+                                core::ptr::null(),
+                            );
+                            while !iterator.is_null() {
+                                let partition = esp_partition_get(iterator);
+                                let label = core::ffi::CStr::from_ptr((*partition).label.as_ptr())
+                                    .to_str()
+                                    .unwrap_or("unknown");
+                                info!(
+                                    "Checking partition: {}, subtype: {:?}, address: 0x{:x}",
+                                    label, *subtype, (*partition).address
+                                );
+                                if !running_partition.is_null() && partition != running_partition {
+                                    self.ota_partition = partition;
+                                    break;
+                                }
+                                iterator = esp_partition_next(iterator);
+                            }
+                            esp_partition_iterator_release(iterator);
+                            if !self.ota_partition.is_null() {
+                                break;
+                            }
+                        }
+                    }
+
+                    if self.ota_partition.is_null() {
+                        error!("No valid OTA partition found for update");
+                        self.ota_state = OtaState::Failed("No valid OTA partition found".to_string());
+                        result = Err(anyhow!("No valid OTA partition found"));
+                    } else {
+                        let label = core::ffi::CStr::from_ptr((*self.ota_partition).label.as_ptr())
+                            .to_str()
+                            .unwrap_or("unknown");
+                        info!(
+                            "Selected OTA partition: {}, address: 0x{:x}, size: 0x{:x}",
+                            label, (*self.ota_partition).address, (*self.ota_partition).size
+                        );
+
+                        let res = esp_partition_erase_range(self.ota_partition, 0, (*self.ota_partition).size as usize);
+                        if res != ESP_OK {
+                            self.ota_state = OtaState::Failed(format!("Failed to erase OTA partition: {}", res));
+                            result = Err(anyhow!("Failed to erase OTA partition: {}", res));
+                        } else {
+                            let res = esp_ota_begin(self.ota_partition, self.fw_size.unwrap_or(0) as usize, &mut self.ota_handle);
+                            if res != ESP_OK {
+                                self.ota_state = OtaState::Failed(format!("Failed to begin OTA: {}", res));
+                                result = Err(anyhow!("Failed to begin OTA: {}", res));
+                            } else {
+                                if let Err(e) = self.request_firmware_chunk(mqtt_client) {
+                                    self.ota_state = OtaState::Failed(format!("Failed to request firmware chunk: {}", e));
+                                    result = Err(e);
+                                }
+                            }
+                        }
+                    }
+                    if let Err(e) = self.send_ota_telemetry(mqtt_client) {
+                        error!("Failed to send OTA telemetry: {:?}", e);
+                    }
+                }
+            } else {
+                info!("No new firmware detected: title and version match current");
+            }
+        } else {
+            info!(
+                "Incomplete firmware attributes: fw_title={:?}, fw_version={:?}",
+                self.fw_title, self.fw_version
+            );
+            result = Err(anyhow!("Incomplete firmware attributes received"));
+        }
+        result
+    }
+
+    fn request_firmware_info(&mut self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        self.request_id += 1;
+        let request_topic = format!("{}{}", OTA_REQUEST_TOPIC, self.request_id);
+        let payload = json!({
+            "sharedKeys": format!(
+                "{},{},{},{},{}",
+                FW_TITLE_ATTR, FW_VERSION_ATTR, FW_SIZE_ATTR, FW_CHECKSUM_ATTR, FW_CHECKSUM_ALG_ATTR
+            )
+        });
+        Self::mqtt_publish(mqtt_client, &request_topic, &payload.to_string())?;
+        info!("Requested firmware info, topic: {}", request_topic);
+        Ok(())
+    }
+
+    fn request_firmware_chunk(&mut self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        if let Some(fw_size) = self.fw_size {
+            if self.received_size >= fw_size as usize {
+                info!("All firmware chunks received, no further requests needed");
+                return Ok(());
+            }
+        }
+        let topic = format!(
+            "{}/{}/chunk/{}",
+            OTA_FIRMWARE_REQUEST_TOPIC, self.firmware_request_id, self.current_chunk
+        );
+        let payload = "1024".to_string();
+        Self::mqtt_publish(mqtt_client, &topic, &payload)?;
+        info!("Requested firmware chunk {}, topic: {}", self.current_chunk, topic);
+        Ok(())
+    }
+
+    fn handle_firmware_chunk(&mut self, data: &[u8], chunk_index: u32, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        if chunk_index != self.current_chunk {
+            error!(
+                "Received chunk {} but expected chunk {}, ignoring",
+                chunk_index, self.current_chunk
+            );
+            return Ok(());
+        }
+
+        if data.is_empty() {
+            if self.received_size == self.fw_size.unwrap_or(0) as usize {
+                info!("Received empty chunk, download complete");
+                self.ota_state = OtaState::Downloaded;
+                unsafe {
+                    let res = esp_ota_end(self.ota_handle);
+                    if res != ESP_OK {
+                        self.ota_state = OtaState::Failed(format!("Failed to end OTA: {}", res));
+                        self.send_ota_telemetry(mqtt_client)?;
+                        return Err(anyhow!("Failed to end OTA: {}", res));
+                    }
+                }
+                self.process_firmware(mqtt_client)?;
+                return Ok(());
+            } else {
+                self.ota_state = OtaState::Failed("Received empty chunk but size mismatch".to_string());
+                self.send_ota_telemetry(mqtt_client)?;
+                return Err(anyhow!("Empty chunk received prematurely"));
+            }
+        }
+
+        self.received_size += data.len();
+        info!(
+            "Received chunk {}, size: {}, total received: {}",
+            self.current_chunk, data.len(), self.received_size
+        );
+
+        if let Some(fw_size) = self.fw_size {
+            let percentage = (self.received_size as f32 / fw_size as f32) * 100.0;
+            info!(
+                "Download progress: {:.2}% ({} / {})",
+                percentage, self.received_size, fw_size
+            );
+            if self.received_size >= fw_size as usize {
+                info!(
+                    "Download complete: received {} bytes of {} bytes",
+                    self.received_size, fw_size
+                );
+            } else {
+                info!(
+                    "Download not complete: received {} bytes, need {} bytes",
+                    self.received_size, fw_size
+                );
+            }
+        }
+
+        self.sha256_hasher.update(data);
+        unsafe {
+            let res = esp_ota_write(self.ota_handle, data.as_ptr() as *const c_void, data.len());
+            if res != ESP_OK {
+                self.ota_state = OtaState::Failed(format!("Failed to write OTA data: {}", res));
+                self.send_ota_telemetry(mqtt_client)?;
+                return Err(anyhow!("Failed to write OTA data: {}", res));
+            }
+        }
+
+        self.current_chunk += 1;
+        if let Some(fw_size) = self.fw_size {
+            if self.received_size >= fw_size as usize {
+                self.ota_state = OtaState::Downloaded;
+                unsafe {
+                    let res = esp_ota_end(self.ota_handle);
+                    if res != ESP_OK {
+                        self.ota_state = OtaState::Failed(format!("Failed to end OTA: {}", res));
+                        self.send_ota_telemetry(mqtt_client)?;
+                        return Err(anyhow!("Failed to end OTA: {}", res));
+                    }
+                }
+                self.process_firmware(mqtt_client)?;
+            } else {
+                self.request_firmware_chunk(mqtt_client)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn process_firmware(&mut self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        self.ota_state = OtaState::Verifying;
+        self.send_ota_telemetry(mqtt_client)?;
+
+        if let Some(checksum) = &self.fw_checksum {
+            let computed_checksum = {
+                let result = self.sha256_hasher.clone().finalize();
+                result.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+            };
+            info!("Computed checksum: {}, Expected checksum: {}", computed_checksum, checksum);
+            if computed_checksum == *checksum {
+                self.ota_state = OtaState::Updating;
+                self.send_ota_telemetry(mqtt_client)?;
+                unsafe {
+                    let res = esp_ota_set_boot_partition(self.ota_partition);
+                    if res != ESP_OK {
+                        self.ota_state = OtaState::Failed(format!("Failed to set boot partition: {}", res));
+                        self.send_ota_telemetry(mqtt_client)?;
+                        return Err(anyhow!("Failed to set boot partition: {}", res));
+                    }
+                }
+                self.current_fw_title = self.fw_title.clone().unwrap_or_default();
+                self.current_fw_version = self.fw_version.clone().unwrap_or_default();
+                self.ota_state = OtaState::Updated;
+                self.send_ota_telemetry(mqtt_client)?;
+                info!("Firmware update successful, restarting...");
+                unsafe { esp_restart(); }
+            } else {
+                self.ota_state = OtaState::Failed("Checksum verification failed".to_string());
+                self.send_ota_telemetry(mqtt_client)?;
+                return Err(anyhow!("Checksum verification failed"));
+            }
+        } else {
+            self.ota_state = OtaState::Failed("No checksum provided".to_string());
+            self.send_ota_telemetry(mqtt_client)?;
+            return Err(anyhow!("No checksum provided"));
+        }
+    }
+
+    fn send_ota_telemetry(&self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        let payload = match &self.ota_state {
+            OtaState::Idle => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "IDLE"
+            })
+            .to_string(),
+            OtaState::Downloading => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "DOWNLOADING"
+            })
+            .to_string(),
+            OtaState::Downloaded => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "DOWNLOADED"
+            })
+            .to_string(),
+            OtaState::Verifying => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "VERIFYING"
+            })
+            .to_string(),
+            OtaState::Updating => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "UPDATING"
+            })
+            .to_string(),
+            OtaState::Updated => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "UPDATED"
+            })
+            .to_string(),
+            OtaState::Failed(error) => json!({
+                FW_STATE_ATTR: "FAILED",
+                "fw_error": error
+            })
+            .to_string(),
+        };
+        Self::mqtt_publish(mqtt_client, OTA_TELEMETRY_TOPIC, &payload)?;
+        info!("Sent OTA telemetry: {}", payload);
+        Ok(())
+    }
+
+    fn mqtt_publish(mqtt_client: *mut esp_mqtt_client, topic: &str, data: &str) -> Result<()> {
+        unsafe {
+            let topic_cstr = CString::new(topic)?;
+            let data_cstr = CString::new(data)?;
+            let msg_id = esp_mqtt_client_publish(
+                mqtt_client,
+                topic_cstr.as_ptr(),
+                data_cstr.as_ptr(),
+                data.len() as i32,
+                1,
+                0,
+            );
+            if msg_id < 0 {
+                Err(anyhow!("Failed to publish message to {}: {}", topic, msg_id))
+            } else {
+                info!("Published message to {} with ID: {}", topic, msg_id);
+                Ok(())
+            }
+        }
+    }
+}
+
+struct SimpleMqttClient {
+    client: *mut esp_mqtt_client,
+}
+
+impl SimpleMqttClient {
+    fn new(
+        broker_url: &str,
+        username: &str,
+        password: &str,
+        client_id: &str,
+        ota_manager_ptr: *mut OtaManager,
+    ) -> Result<Self> {
+        unsafe {
+            let broker_url_cstr = CString::new(broker_url)?;
+            let username_cstr = CString::new(username)?;
+            let password_cstr = CString::new(password)?;
+            let client_id_cstr = CString::new(client_id)?;
+            let config = esp_mqtt_client_config_t {
+                broker: esp_mqtt_client_config_t_broker_t {
+                    address: esp_mqtt_client_config_t_broker_t_address_t {
+                        uri: broker_url_cstr.as_ptr(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                credentials: esp_mqtt_client_config_t_credentials_t {
+                    username: username_cstr.as_ptr(),
+                    client_id: client_id_cstr.as_ptr(),
+                    authentication: esp_mqtt_client_config_t_credentials_t_authentication_t {
+                        password: password_cstr.as_ptr(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                buffer: esp_mqtt_client_config_t_buffer_t {
+                    size: 4096,
+                    out_size: 4096,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let client = esp_mqtt_client_init(&config);
+            if client.is_null() {
+                return Err(anyhow!("Failed to initialize MQTT client"));
+            }
+            esp_mqtt_client_register_event(
+                client,
+                esp_mqtt_event_id_t_MQTT_EVENT_ANY,
+                Some(Self::mqtt_event_handler),
+                ota_manager_ptr as *mut c_void,
+            );
+            let err = esp_mqtt_client_start(client);
+            if err != ESP_OK {
+                esp_mqtt_client_destroy(client);
+                return Err(anyhow!("Failed to start MQTT client, error code: {}", err));
+            }
+            vTaskDelay(ms_to_ticks(5000));
+            Ok(Self { client })
+        }
+    }
+
+    extern "C" fn mqtt_event_handler(
+        handler_args: *mut c_void,
+        _base: *const u8,
+        event_id: i32,
+        event_data: *mut c_void,
+    ) {
+        unsafe {
+            let ota_manager = handler_args as *mut OtaManager;
+            if ota_manager.is_null() {
+                error!("OTA manager pointer is null");
+                return;
+            }
+            let event = &*(event_data as *mut esp_mqtt_event_t);
+            if event_id == esp_mqtt_event_id_t_MQTT_EVENT_DATA as i32 {
+                let topic_len = event.topic_len as usize;
+                let data_len = event.data_len as usize;
+                if topic_len > 0 && data_len > 0 {
+                    let topic_slice = core::slice::from_raw_parts(event.topic as *const u8, topic_len);
+                    let topic = core::str::from_utf8(topic_slice).unwrap_or("");
+                    info!("Received MQTT message on topic: {}", topic);
+                    let data_slice = core::slice::from_raw_parts(event.data as *const u8, data_len);
+                    if topic.starts_with(OTA_RESPONSE_TOPIC) {
+                        if let Ok(data_str) = core::str::from_utf8(data_slice) {
+                            info!("OTA response data: {}", data_str);
+                            if let Err(e) = (*ota_manager).handle_shared_attributes(data_str, event.client) {
+                                error!("Failed to handle OTA attributes: {:?}", e);
+                            }
+                        } else {
+                            error!("Invalid UTF-8 in OTA response");
+                        }
+                    } else if topic.starts_with(&format!(
+                        "{}/{}/",
+                        OTA_FIRMWARE_RESPONSE_TOPIC, (*ota_manager).firmware_request_id
+                    )) {
+                        let total_len = event.total_data_len as usize;
+                        let offset = event.current_data_offset as usize;
+                        let chunk_data_len = event.data_len as usize;
+                        let data_slice = core::slice::from_raw_parts(event.data as *const u8, chunk_data_len);
+
+                        if offset == 0 {
+                            (*ota_manager).partial_firmware_data.clear();
+                            (*ota_manager).partial_firmware_data.extend_from_slice(data_slice);
+                        } else {
+                            (*ota_manager).partial_firmware_data.extend_from_slice(data_slice);
+                        }
+
+                        if offset + chunk_data_len >= total_len {
+                            let topic_parts: Vec<&str> = topic.split('/').collect();
+                            if let Some(chunk_str) = topic_parts.last() {
+                                if let Ok(chunk_index) = chunk_str.parse::<u32>() {
+                                    info!(
+                                        "Received complete firmware chunk for request ID: {}, chunk: {}, data length: {}",
+                                        (*ota_manager).firmware_request_id, chunk_index, (*ota_manager).partial_firmware_data.len()
+                                    );
+                                    if let Err(e) = (*ota_manager).handle_firmware_chunk(
+                                        &(*ota_manager).partial_firmware_data,
+                                        chunk_index,
+                                        event.client,
+                                    ) {
+                                        error!("Failed to handle firmware chunk: {:?}", e);
+                                    }
+                                } else {
+                                    error!("Invalid chunk index in topic: {}", topic);
+                                }
+                            }
+                            (*ota_manager).partial_firmware_data.clear();
+                        }
+                    } else {
+                        info!("Received MQTT message on unexpected topic: {}", topic);
+                    }
+                }
+            }
+        }
+    }
+
+    fn publish(&self, topic: &str, data: &str) -> Result<()> {
+        OtaManager::mqtt_publish(self.client, topic, data)
+    }
+
+    fn subscribe(&self, topic: &str) -> Result<()> {
+        unsafe {
+            let topic_cstr = CString::new(topic)?;
+            let result = esp_mqtt_client_subscribe_single(self.client, topic_cstr.as_ptr(), 1);
+            if result == -1 {
+                Err(anyhow!("Failed to subscribe to topic: {}", topic))
+            } else {
+                info!("Subscribed to: {}", topic);
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Drop for SimpleMqttClient {
+    fn drop(&mut self) {
+        unsafe {
+            esp_mqtt_client_stop(self.client);
+            esp_mqtt_client_destroy(self.client);
+        }
+    }
+}
+
+// Fungsi baru untuk mendapatkan waktu real-time dalam format string (YYYY-MM-DD HH:MM:SS)
+fn get_formatted_time() -> String {
+    unsafe {
+        let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
+        gettimeofday(&mut tv, core::ptr::null_mut());
+
+        let mut tm_val = tm {
+            tm_sec: 0,
+            tm_min: 0,
+            tm_hour: 0,
+            tm_mday: 0,
+            tm_mon: 0,
+            tm_year: 0,
+            tm_wday: 0,
+            tm_yday: 0,
+            tm_isdst: 0,
+        };
+
+        localtime_r(&tv.tv_sec, &mut tm_val);
+
+        format!(
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+            tm_val.tm_year + 1900,
+            tm_val.tm_mon + 1,
+            tm_val.tm_mday,
+            tm_val.tm_hour,
+            tm_val.tm_min,
+            tm_val.tm_sec
+        )
+    }
+}
+
+fn send_telemetry(mqtt_client: &SimpleMqttClient, distance: f32) -> Result<()> {
+    unsafe {
+        let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
+        gettimeofday(&mut tv, core::ptr::null_mut());
+        let timestamp = tv.tv_sec; // Waktu dalam detik sejak epoch
+        let payload = json!({
+            "water_level_distance": distance,
+            "timestamp": timestamp,
+            "realtime_clock": get_formatted_time(),  // Sudah dalam WIB setelah TZ diatur
+        })
+        .to_string();
+        mqtt_client.publish(OTA_TELEMETRY_TOPIC, &payload)?;
+        info!("Data sent to ThingsBoard: {}", payload);
+        Ok(())
+    }
+}
+
+fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> Result<()> {
+    let ssid = "~SkyNet~";
+    let password = "20201908";
+    let wifi_config = Configuration::Client(ClientConfiguration {
+        ssid: HeaplessString::try_from(ssid).unwrap(),
+        password: HeaplessString::try_from(password).unwrap(),
+        auth_method: AuthMethod::WPA2Personal,
+        ..Default::default()
+    });
+    wifi.set_configuration(&wifi_config)?;
+    wifi.start()?;
+    wifi.connect()?;
+    wifi.wait_netif_up()?;
+    let ip_info = wifi.wifi().sta_netif().get_ip_info()?;
+    info!("WiFi Connected, IP: {}", ip_info.ip);
+    Ok(())
+}
+
+fn read_water_level(
+    trigger: &mut PinDriver<'_, Gpio11, Output>,
+    echo: &mut PinDriver<'_, Gpio12, Input>,
+) -> f32 {
+    let _ = trigger.set_low();
+    Ets::delay_us(2);
+    let _ = trigger.set_high();
+    Ets::delay_us(10);
+    let _ = trigger.set_low();
+
+    let wait_start = unsafe { esp_timer_get_time() };
+    while echo.is_low() {
+        if unsafe { esp_timer_get_time() - wait_start } > 100_000 {
+            return 0.0;
+        }
+    }
+
+    let start = unsafe { esp_timer_get_time() };
+    while echo.is_high() {
+        if unsafe { esp_timer_get_time() - start } > 25_000 {
+            return 0.0;
+        }
+    }
+    let end = unsafe { esp_timer_get_time() };
+
+    let duration_us = (end - start) as f32;
+    let distance = duration_us * 0.0343 / 2.0;
+
+    if distance < 2.0 || distance > 400.0 {
+        0.0
+    } else {
+        distance
+    }
+}
+
+#[no_mangle]
+fn main() -> i32 {
+    esp_idf_sys::link_patches();
+    EspLogger::initialize_default();
+    info!("Ultrasonic sensor mulai membaca program Wi-Fi, MQTT, dan OTA...");
+
+    // Pengaturan timezone untuk WIB (UTC+7)
+    unsafe {
+        let tz = CString::new("WIB-7").unwrap(); // WIB = UTC+7
+        setenv(CString::new("TZ").unwrap().as_ptr(), tz.as_ptr(), 1);
+        tzset();
+    }
+    info!("Timezone set to WIB (UTC+7)");
+
+    let peripherals = match Peripherals::take() {
+        Ok(peripherals) => peripherals,
+        Err(e) => {
+            error!("Failed to take peripherals: {:?}", e);
+            return -1;
+        }
+    };
+    let sys_loop = match EspSystemEventLoop::take() {
+        Ok(sys_loop) => sys_loop,
+        Err(e) => {
+            error!("Failed to take system event loop: {:?}", e);
+            return -1;
+        }
+    };
+    let nvs = match EspDefaultNvsPartition::take() {
+        Ok(nvs) => nvs,
+        Err(e) => {
+            error!("Failed to take NVS partition: {:?}", e);
+            return -1;
+        }
+    };
+    let esp_wifi = match EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs)) {
+        Ok(wifi) => wifi,
+        Err(e) => {
+            error!("Failed to initialize EspWifi: {:?}", e);
+            return -1;
+        }
+    };
+    let mut wifi = match BlockingWifi::wrap(esp_wifi, sys_loop) {
+        Ok(wifi) => wifi,
+        Err(e) => {
+            error!("Failed to wrap EspWifi into BlockingWifi: {:?}", e);
+            return -1;
+        }
+    };
+
+    if let Err(e) = connect_wifi(&mut wifi) {
+        error!("Gagal Koneksi ke WiFi: {:?}", e);
+        return -1;
+    }
+
+    // Tambahan: Inisialisasi SNTP untuk sync RTC dengan NTP server
+    info!("Initializing SNTP for Real-Time Clock");
+    let ntp = match EspSntp::new_default() {
+        Ok(ntp) => ntp,
+        Err(e) => {
+            error!("Failed to initialize SNTP: {:?}", e);
+            return -1;
+        }
+    };
+    let mut delay = Delay::new(100);
+    while ntp.get_sync_status() != SyncStatus::Completed {
+        info!("Waiting for time synchronization...");
+        delay.delay_ms(1000);
+    }
+    info!("Real-Time Clock synchronized with NTP, time: {}", get_formatted_time());
+
+    let trigger_pin = peripherals.pins.gpio11;
+    let mut trigger = match PinDriver::output(trigger_pin) {
+        Ok(trigger) => trigger,
+        Err(e) => {
+            error!("Gagal Konfigurasi GPIO11 (trigger): {:?}", e);
+            return -1;
+        }
+    };
+    let echo_pin = peripherals.pins.gpio12;
+    let mut echo = match PinDriver::input(echo_pin) {
+        Ok(echo) => echo,
+        Err(e) => {
+            error!("Gagal Konfigurasi GPIO12 (echo): {:?}", e);
+            return -1;
+        }
+    };
+    info!("GPIO11 (trigger) and GPIO12 (echo) configured for ultrasonic sensor");
+
+    info!("Koneksi ke MQTT broker...");
+    let mut ota_manager = Box::new(OtaManager::new());
+    let ota_manager_ptr = &mut *ota_manager as *mut OtaManager;
+
+    let mqtt_client = match SimpleMqttClient::new(
+        "mqtt://mqtt.thingsboard.cloud:1883",
+        "shelmais",
+        "shelma118",
+        "ghhaay0h3x6w5sipos0f",
+        ota_manager_ptr,
+    ) {
+        Ok(client) => {
+            info!("Connected to ThingsBoard MQTT broker");
+            if let Err(e) = client.subscribe("v1/devices/me/attributes/response/+") {
+                error!("Failed to subscribe to OTA response: {:?}", e);
+            }
+            if let Err(e) = client.subscribe("v1/devices/me/attributes") {
+                error!("Failed to subscribe to attributes: {:?}", e);
+            }
+            if let Err(e) = client.subscribe("v2/fw/response/+/chunk/+") {
+                error!("Failed to subscribe to firmware response: {:?}", e);
+            }
+            client
+        }
+        Err(e) => {
+            error!("Failed to connect to MQTT: {:?}", e);
+            return -1;
+        }
+    };
+
+    if let Err(e) = ota_manager.request_firmware_info(mqtt_client.client) {
+        error!("Failed to request firmware info: {:?}", e);
+    }
+
+    let mut counter = 0;
+    let mut ota_check_counter = 0;
+    loop {
+        counter += 1;
+        ota_check_counter += 1;
+        if ota_check_counter >= 6 && ota_manager.ota_state == OtaState::Idle {
+            ota_check_counter = 0;
+            if let Err(e) = ota_manager.request_firmware_info(mqtt_client.client) {
+                error!("Failed to request firmware info: {:?}", e);
+            }
+        }
+
+        let distance = read_water_level(&mut trigger, &mut echo);
+        if distance > 0.0 {
+            let distance_cm = Distance(distance);
+            info!("=== Reading {} ===", counter);
+            info!("📏 Jarak: {:.2} cm", distance_cm.as_f32());
+            if let Err(e) = send_telemetry(&mqtt_client, distance_cm.as_f32()) {
+                error!("Gagal Mengirim ke telemetry: {:?}", e);
+            }
+        } else {
+            error!("❌ Pembacaan Sensor Tidak Valid");
+            info!("💡 Segera Check:");
+            info!("   - Koneksi Sensor ke GPIO11 (trigger) dan GPIO12 (echo)");
+            info!("   - Koneksi kabel aman");
+            info!("   - Sensor diluar jangkauan");
+        }
+
+        if ota_manager.ota_state != OtaState::Idle {
+            if let Err(e) = ota_manager.send_ota_telemetry(mqtt_client.client) {
+                error!("Gagal Mengirim ke OTA telemetry: {:?}", e);
+            }
+        }
+
+        delay.delay_ms(3000);
+    }
+}
