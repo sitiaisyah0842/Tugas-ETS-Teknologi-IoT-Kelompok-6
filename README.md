@@ -105,4 +105,15 @@ sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data >
 
 
 ## Kesimpulan
+1. Proses ESP flash dan OTA update pada ESP32-S3 berhasil dilakukan secara bertahap melalui mekanisme chunk-based transfer, menunjukkan bahwa perangkat mampu berkomunikasi dua arah dengan ThingsBoard Cloud secara stabil melalui protokol MQTT dan mendukung pembaruan firmware jarak jauh tanpa gangguan.
+2. ThingsBoard Cloud berfungsi optimal dalam mengelola, menyimpan, dan mendistribusikan beberapa versi firmware (.bin) secara terorganisir, menandakan sistem OTA mampu mendukung pembaruan perangkat dengan fleksibel dan efisien untuk pemeliharaan sistem IoT secara real-time.
+3. Data dari sensor level air menunjukkan kestabilan pembacaan di kisaran 7–8 cm dengan interval waktu yang konsisten, serta sinkronisasi waktu antara realtime clock perangkat dan timestamp server berjalan baik, menandakan pengiriman data berlangsung dengan latensi rendah.
+4. Perangkat dan device profile yang terhubung melalui ThingsBoard bekerja sesuai konfigurasi, menghasilkan data telemetry yang teratur serta grafik pengukuran yang stabil, membuktikan integrasi sistem antara ESP32-S3 dan platform cloud berjalan dengan baik dan andal.
+5. Terdapat sedikit perbedaan waktu antara timestamp dan realtime clock akibat faktor komunikasi atau sinkronisasi, namun deviasi yang muncul masih dalam batas wajar (1–3 detik), menunjukkan sistem tetap handal dan responsif dalam pengiriman data sensor ke platform cloud.
 
+
+
+## Saran
+1. Perlu dilakukan sinkronisasi otomatis antara RTC perangkat dan server agar data memiliki waktu pencatatan yang akurat dan latensi dapat diminimalkan.
+2. Disarankan untuk menambahkan enkripsi serta verifikasi integritas firmware guna memastikan proses pembaruan jarak jauh berjalan aman dan bebas dari korupsi data.
+3. Perlu dilakukan uji performa sistem pada berbagai kondisi jaringan untuk memastikan stabilitas komunikasi MQTT dan ketahanan sistem dalam situasi nyata.
