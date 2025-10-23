@@ -61,6 +61,7 @@ Pastikan semua sambungan kabel sesuai dengan daftar di atas dan gunakan **level 
 Struktur proyek terdiri atas:
    - main.rs
    - cargo.toml
+   - beserta file pendukung yang dapat dilihat di folder 'code'
 
 Seluruh program diatas sudah saya lampirkan di github dengan format .txt
 
