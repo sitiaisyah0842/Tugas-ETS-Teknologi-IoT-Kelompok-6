@@ -1,0 +1,39 @@
+gnuplot> set ydata time
+gnuplot> set timefmt "%m/%d/%Y %H:%M"
+gnuplot> set format y "%H:%M\n%m-%d"
+gnuplot> 
+gnuplot> plot "data fix.csv" using 2:(timecolumn(1, "%m/%d/%Y %H:%M")) with linespoints ls 1 title "Timestamp", \
+>     "" using 2:(timecolumn(3, "%m/%d/%Y %H:%M")) with linespoints ls 2 title "Realtime Clock"
+gnuplot> ### Konfigurasi dasar ###
+gnuplot> reset
+gnuplot> set datafile separator ","
+gnuplot> set term qt font "Helvetica,11" size 1000,600
+
+Terminal type is now 'qt'
+Options are '0 size 1000, 600 font "Helvetica,11"'
+gnuplot> set title "Perbandingan Timestamp dan Realtime Clock terhadap Level" font "Helvetica-Bold,12"
+gnuplot> set grid lc rgb "#dddddd" lw 1
+gnuplot> 
+gnuplot> ### Sumbu dan format ###
+gnuplot> set xdata time
+gnuplot> set timefmt "%m/%d/%Y %H:%M"
+gnuplot> set format x "%H:%M\n%m-%d"
+gnuplot> set xlabel "Waktu" font "Helvetica,11"
+gnuplot> set ylabel "Level" font "Helvetica,11"
+gnuplot> set key outside top center horizontal box lc rgb "#888888"
+gnuplot> 
+gnuplot> ### Style garis (lebih kontras & lembut) ###
+gnuplot> set style line 1 lc rgb "#4F81BD" lw 3 pt 7 ps 0.6   # Biru lembut untuk Timestamp
+gnuplot> set style line 2 lc rgb "#E67E22" lw 3 dashtype 2 pt 9 ps 0.8   # Oranye lembut, garis putus-putus
+gnuplot> set style increment user
+                             ^
+         warning: deprecated command
+gnuplot> 
+gnuplot> ### Area plot ###
+gnuplot> set border lw 1 lc rgb "#888888"
+gnuplot> set xtics font "Helvetica,10" textcolor rgb "#555555"
+gnuplot> set ytics font "Helvetica,10" textcolor rgb "#555555"
+gnuplot> 
+gnuplot> ### Plot ###
+gnuplot> plot "data fix.csv" using (timecolumn(1, "%m/%d/%Y %H:%M")):2 with linespoints ls 1 title "Timestamp", \
+>     "" using (timecolumn(3, "%m/%d/%Y %H:%M")):2 with linespoints ls 2 title "Realtime Clock"
