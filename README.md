@@ -97,5 +97,12 @@ sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data >
 
 ## Pembahasan Hasil
 
+<p align="center">
+  <img src="Grafik Perbandingan Timestamp dan Realtime Clock.jpg" alt="Grafik Perbandingan Timestamp dan Realtime Clock" width="300"><br>
+  <em>Gambar 1.3 Grafik Perbandingan Timestamp dan Realtime Clock</em>
+</p>
+
+
+
 ## Kesimpulan
 
