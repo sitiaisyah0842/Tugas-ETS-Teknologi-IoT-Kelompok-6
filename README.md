@@ -96,11 +96,11 @@ sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data >
 </p>
 
 ## Pembahasan Hasil
-5.1 Hasil Pengujian pada Visual Studio Code
+### 5.1 Hasil Pengujian pada Visual Studio Code
 GAMBAR
 Berdasarkan hasil pengujian proses esp.flash pada ESP32-S3 yang ditampilkan melalui terminal Visual Studio Code, terlihat bahwa sistem berhasil melakukan proses pembacaan data sensor dan pengunduhan firmware secara bertahap melalui mekanisme chunk-based transfer. Log menunjukkan bahwa perangkat mampu mempublikasikan dan menerima pesan MQTT secara berurutan untuk setiap potongan data firmware (chunk) dengan ukuran tertentu, serta mengirimkan data telemetry seperti jarak air dan waktu pembacaan ke ThingsBoard Cloud secara real-time. Proses pembaruan firmware ditandai dengan status DOWNLOADING, di mana setiap chunk diterima, diakumulasi, dan diverifikasi hingga seluruh data firmware selesai diunduh. Hasil ini menunjukkan bahwa fungsi flash dan OTA pada ESP32-S3 bekerja dengan baik, memiliki kemampuan komunikasi dua arah yang stabil melalui MQTT, serta dapat melakukan update firmware secara remote tanpa gangguan, yang menegaskan keandalan sistem dalam mendukung pemeliharaan perangkat IoT secara efisien dan aman.
 
-5.2 Hasil Pengujian dalam Thingsboard
+### 5.2 Hasil Pengujian dalam Thingsboard
 GAMBAR
 Berdasarkan hasil pengujian pada fitur OTA (Over-The-Air) update di platform ThingsBoard Cloud, terlihat bahwa sistem berhasil mengelola dan menyimpan beberapa versi paket firmware yang telah diunggah dengan format file .bin. Terdapat empat entri firmware dengan judul dan versi berbeda mulai dari shelmais2.0 hingga shelmais3.0 yang menunjukkan proses pembaruan firmware berjalan secara bertahap dan terdokumentasi dengan baik melalui kolom waktu pembuatan (created time) dan version tag. Hal ini menandakan bahwa mekanisme OTA pada sistem berfungsi sesuai tujuan, yaitu memungkinkan pembaruan firmware perangkat ESP32-S3 dari jarak jauh tanpa intervensi fisik. Dengan status paket yang aktif serta keberhasilan unggahan beberapa versi firmware, dapat disimpulkan bahwa integrasi antara perangkat, ThingsBoard Cloud, dan sistem OTA berjalan dengan baik, stabil, serta mendukung peningkatan fleksibilitas dan efisiensi pemeliharaan sistem IoT secara real-time.
 GAMBAR
@@ -111,7 +111,7 @@ GAMBAR
 Gambar tersebut menunjukkan tampilan Timeseries Table pada dashboard ThingsBoard Cloud, yang menampilkan data pembacaan sensor secara real-time. Berdasarkan tabel, nilai Level yang terukur adalah 8 cm secara konsisten pada setiap pembacaan dengan interval waktu yang sangat rapat, sekitar 2–3 detik antara setiap data. Hal ini menunjukkan bahwa sensor level air bekerja secara stabil dan menghasilkan data yang konstan tanpa adanya fluktuasi signifikan selama periode pengamatan. Kolom realtime_clock yang sejalan dengan timestamp menandakan bahwa sinkronisasi waktu antara RTC (Real Time Clock) di perangkat dan waktu server cloud berjalan dengan baik. Dari hasil ini dapat disimpulkan bahwa sistem pengiriman data dari sensor ke ThingsBoard melalui jaringan MQTT berfungsi optimal, dengan latensi rendah dan keandalan tinggi dalam pelaporan level air secara kontinu.
 GAMBAR
 Berdasarkan hasil pembacaan grafik level pada dashboard ThingsBoard Cloud, terlihat bahwa nilai level air berada pada kisaran 7 cm dengan rata-rata pembacaan yang stabil dan fluktuasi yang sangat kecil selama periode waktu 19:54:05 hingga 19:55:00. Garis grafik yang cenderung datar menunjukkan bahwa sensor ultrasonik berfungsi dengan baik dan mampu menjaga konsistensi pengukuran tanpa adanya gangguan signifikan seperti noise atau lonjakan data. Stabilitas ini mengindikasikan bahwa sistem pengukuran dan komunikasi data dari perangkat ke cloud berjalan normal, serta koneksi MQTT antara ESP32-S3 dan ThingsBoard bekerja dengan baik dalam mentransmisikan data level secara real-time.
-5.3 
+#### 5.3 Latency Analysis IoT Data Streaming
 <p align="center">
   <img src="Grafik Perbandingan Timestamp dan Realtime Clock.jpg" alt="Grafik Perbandingan Timestamp dan Realtime Clock" width="500"><br>
   <em>Gambar 1.3 Grafik Perbandingan Timestamp dan Realtime Clock</em>
