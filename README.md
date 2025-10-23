@@ -98,38 +98,38 @@ sesuai diagram alir lengkap (Mulai > WiFi Terhubung? > Pengukuran > Kirim Data >
 ## Pembahasan Hasil
 ### 5.1 Hasil Pengujian pada Visual Studio Code
 <p align="center">
-  <img src="gambar 1.jpeg" alt="Hasil .\flash.sh atau Run Program Rust pada Terminal" width="300"><br>
+  <img src="gambar 1.jpeg" alt="Hasil .\flash.sh atau Run Program Rust pada Terminal" width="500"><br>
   <em>Gambar 5.0 Hasil .\flash.sh atau Run Program Rust pada Terminal</em>
 </p>
 Berdasarkan hasil pengujian proses esp.flash pada ESP32-S3 yang ditampilkan melalui terminal Visual Studio Code, terlihat bahwa sistem berhasil melakukan proses pembacaan data sensor dan pengunduhan firmware secara bertahap melalui mekanisme chunk-based transfer. Log menunjukkan bahwa perangkat mampu mempublikasikan dan menerima pesan MQTT secara berurutan untuk setiap potongan data firmware (chunk) dengan ukuran tertentu, serta mengirimkan data telemetry seperti jarak air dan waktu pembacaan ke ThingsBoard Cloud secara real-time. Proses pembaruan firmware ditandai dengan status DOWNLOADING, di mana setiap chunk diterima, diakumulasi, dan diverifikasi hingga seluruh data firmware selesai diunduh. Hasil ini menunjukkan bahwa fungsi flash dan OTA pada ESP32-S3 bekerja dengan baik, memiliki kemampuan komunikasi dua arah yang stabil melalui MQTT, serta dapat melakukan update firmware secara remote tanpa gangguan, yang menegaskan keandalan sistem dalam mendukung pemeliharaan perangkat IoT secara efisien dan aman.
 
 ### 5.2 Hasil Pengujian dalam Thingsboard
 <p align="center">
-  <img src="Gambar 2.jpeg" alt="OTA Update pada Thingsboard" width="300"><br>
+  <img src="Gambar 2.jpeg" alt="OTA Update pada Thingsboard" width="500"><br>
   <em>Gambar 5.1 OTA Update pada Thingsboard</em>
 </p>
 Berdasarkan hasil pengujian pada fitur OTA (Over-The-Air) update di platform ThingsBoard Cloud, terlihat bahwa sistem berhasil mengelola dan menyimpan beberapa versi paket firmware yang telah diunggah dengan format file .bin. Terdapat empat entri firmware dengan judul dan versi berbeda mulai dari shelmais2.0 hingga shelmais3.0 yang menunjukkan proses pembaruan firmware berjalan secara bertahap dan terdokumentasi dengan baik melalui kolom waktu pembuatan (created time) dan version tag. Hal ini menandakan bahwa mekanisme OTA pada sistem berfungsi sesuai tujuan, yaitu memungkinkan pembaruan firmware perangkat ESP32-S3 dari jarak jauh tanpa intervensi fisik. Dengan status paket yang aktif serta keberhasilan unggahan beberapa versi firmware, dapat disimpulkan bahwa integrasi antara perangkat, ThingsBoard Cloud, dan sistem OTA berjalan dengan baik, stabil, serta mendukung peningkatan fleksibilitas dan efisiensi pemeliharaan sistem IoT secara real-time.
 
 <p align="center">
-  <img src="gambar 3.jpeg" alt="Device Profile pada Thingsboard" width="300"><br>
+  <img src="gambar 3.jpeg" alt="Device Profile pada Thingsboard" width="500"><br>
   <em>Gambar 5.2 Device Profile pada Thingsboard</em>
 </p>
 Gambar tersebut menunjukkan tampilan halaman Device Profiles pada platform ThingsBoard Cloud, di mana pengguna dengan nama akun Shelma Sabila telah membuat profil perangkat bernama "shelmais". Profil ini berfungsi sebagai template konfigurasi yang menentukan parameter komunikasi, aturan data, serta pengaturan dashboard untuk perangkat IoT yang terhubung. Status sistem di bagian atas menunjukkan kondisi "Active (Action required)", yang menandakan bahwa langganan masih aktif namun memerlukan tindakan tambahan, seperti verifikasi atau pembaruan konfigurasi. Dengan adanya device profile ini, setiap perangkat yang terhubung dapat menggunakan pengaturan yang sama secara konsisten, sehingga mempermudah proses integrasi, pemantauan, dan pengelolaan data sensor melalui ThingsBoard Cloud.
 
 <p align="center">
-  <img src="gambar 4.jpeg" alt="Device pada Thingsboard" width="300"><br>
+  <img src="gambar 4.jpeg" alt="Device pada Thingsboard" width="500"><br>
   <em>Gambar 5.3 Device pada Thingsboard</em>
 </p>
 Gambar tersebut menampilkan tampilan halaman Devices pada platform ThingsBoard Cloud, di mana perangkat bernama “shelmais” sedang dipantau melalui tab Latest Telemetry. Dari data yang terlihat, perangkat ini memiliki beberapa parameter penting seperti current_fw_title dengan nilai Water Level Sensor, current_fw_version versi V1.0, fw_state dengan status UPDATING, serta realtime_clock yang menunjukkan waktu pembaruan terakhir yaitu 2025-10-14 12:37:14. Informasi tersebut menunjukkan bahwa perangkat “shelmais” berfungsi sebagai sensor ketinggian air (water level sensor) dan sedang menjalani proses pembaruan firmware secara aktif. Data telemetry yang tercatat juga menandakan bahwa koneksi antara perangkat fisik (misalnya ESP32 atau mikrokontroler lain) dan platform cloud berjalan dengan baik, memungkinkan ThingsBoard untuk menerima data real-time serta status sistem dari perangkat tersebut.
 
 <p align="center">
-  <img src="gambar 5.jpeg" alt="Hasil Pembacaan Data Tabel pada Dashboard Thingsboard" width="300"><br>
+  <img src="gambar 5.jpeg" alt="Hasil Pembacaan Data Tabel pada Dashboard Thingsboard" width="500"><br>
   <em>Gambar 5.4 Hasil Pembacaan Data Tabel pada Dashboard Thingsboard</em>
 </p>
 Gambar tersebut menunjukkan tampilan Timeseries Table pada dashboard ThingsBoard Cloud, yang menampilkan data pembacaan sensor secara real-time. Berdasarkan tabel, nilai Level yang terukur adalah 8 cm secara konsisten pada setiap pembacaan dengan interval waktu yang sangat rapat, sekitar 2–3 detik antara setiap data. Hal ini menunjukkan bahwa sensor level air bekerja secara stabil dan menghasilkan data yang konstan tanpa adanya fluktuasi signifikan selama periode pengamatan. Kolom realtime_clock yang sejalan dengan timestamp menandakan bahwa sinkronisasi waktu antara RTC (Real Time Clock) di perangkat dan waktu server cloud berjalan dengan baik. Dari hasil ini dapat disimpulkan bahwa sistem pengiriman data dari sensor ke ThingsBoard melalui jaringan MQTT berfungsi optimal, dengan latensi rendah dan keandalan tinggi dalam pelaporan level air secara kontinu.
 
 <p align="center">
-  <img src="gambar 6.jpeg" alt="Hasil Pembacaan Data Grafik pada Dashboard Thingsboard" width="300"><br>
+  <img src="gambar 6.jpeg" alt="Hasil Pembacaan Data Grafik pada Dashboard Thingsboard" width="500"><br>
   <em>Gambar 5.5 Hasil Pembacaan Data Grafik pada Dashboard Thingsboard</em>
 </p>
 Berdasarkan hasil pembacaan grafik level pada dashboard ThingsBoard Cloud, terlihat bahwa nilai level air berada pada kisaran 7 cm dengan rata-rata pembacaan yang stabil dan fluktuasi yang sangat kecil selama periode waktu 19:54:05 hingga 19:55:00. Garis grafik yang cenderung datar menunjukkan bahwa sensor ultrasonik berfungsi dengan baik dan mampu menjaga konsistensi pengukuran tanpa adanya gangguan signifikan seperti noise atau lonjakan data. Stabilitas ini mengindikasikan bahwa sistem pengukuran dan komunikasi data dari perangkat ke cloud berjalan normal, serta koneksi MQTT antara ESP32-S3 dan ThingsBoard bekerja dengan baik dalam mentransmisikan data level secara real-time.
