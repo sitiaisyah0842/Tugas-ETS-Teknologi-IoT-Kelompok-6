@@ -1,1 +1,1616 @@
+% ==========================================================
+% LAPORAN PROJECT TEKNOLOGI IOT
+% KELOMPOK 8 - ITS 2025
+% ==========================================================
+\documentclass[12pt,a4paper]{report}
 
+% --- Encoding & Font ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype} % Improved hyphenation and justification
+
+% --- Bahasa & Margin ---
+\usepackage[indonesian]{babel}
+\usepackage{geometry}
+\geometry{left=30mm,right=25mm,top=30mm,bottom=25mm}
+\usepackage{setspace}
+\setstretch{0.9}  
+
+% Tambahan untuk paragraph spacing: no extra space before/after (seperti Word)
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{1 em} 
+
+% --- Hyperlink & Warna ---
+\usepackage{hyperref}
+\usepackage{xcolor}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+% --- Gambar, tabel, dsb ---
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+% --- Kode program ---
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Definisi bahasa Rust
+\lstdefinelanguage{Rust}{
+  morekeywords={
+    as, break, const, continue, crate, else, enum, extern, false, fn, for, if,
+    impl, in, let, loop, match, mod, move, mut, pub, ref, return, self, Self,
+    static, struct, super, trait, true, type, unsafe, use, where, while, dyn,
+    async, await
+  },
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/}{/},
+  morestring=[b]",
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  prebreak=\space,
+  postbreak=\space,
+  breakindent=0pt,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  captionpos=b,
+  keywordstyle=\bfseries\color{blue!70!black},
+  commentstyle=\itshape\color{gray!70!black},
+  stringstyle=\color{green!40!black},
+  showstringspaces=false,
+  tabsize=2,
+  xleftmargin=0.5em,
+  xrightmargin=0.5em
+}
+
+% ==========================================================
+\begin{document}
+
+% ----------------- COVER -----------------
+\begin{titlepage}
+    \centering
+    \vspace*{1.5 cm}
+    {\Large \textbf{LAPORAN PROJECT}} 
+    {\Large  \textbf{TEKNOLOGI IOT}}\\[1cm]
+    {\LARGE \textbf{Sistem IoT Monitoring Ketinggian Air Tangki Rumah Tangga berbasis ESP32-S3 dan ThingsBoard}}\\[1cm]
+
+
+
+    \begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{images.png}
+  \label{fig:diagram}
+\end{figure}
+
+    \textbf{Kelompok 8}\\[0.3cm]
+   Siti Aisyah (2042231008)\\
+   Shelma Nur Sabila (2042231022)\\[1cm]
+
+    \textbf{Dosen Pengampu:}\\
+    Ahmad Radhy, S.Si., M.Si.\\[1cm]
+
+    \textbf{Program Studi Teknologi Rekayasa Instrumentasi}\\
+    \textbf{Institut Teknologi Sepuluh Nopember}\\
+    \textbf{Tahun Akademik 2025}
+
+    \vfill
+\end{titlepage}
+
+% ==========================================================
+% DAFTAR ISI, GAMBAR, TABEL
+\tableofcontents
+\listoffigures
+\clearpage
+
+% ==========================================================
+\chapter{PENDAHULUAN}
+
+\section{Latar Belakang}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.0}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Ketersediaan air di tangki rumah tangga sering tidak terpantau sehingga menimbulkan risiko kekurangan maupun pemborosan. Sistem manual kurang efisien karena membutuhkan pengecekan langsung. Dengan IoT berbasis ESP32-S3 dan ThingsBoard, ketinggian air dapat dipantau secara \textit{real-time} melalui dashboard. Selain itu, integrasi sistem \textit{Over-The-Air} memungkinkan pembaruan \textit{firmware} secara \textit{remote} tanpa intervensi fisik, sehingga memudahkan pemeliharaan dan peningkatan fitur sistem pada perangkat ESP32-S3. Solusi ini meningkatkan efisiensi penggunaan air sekaligus mendukung otomasi rumah tangga cerdas, dengan kemampuan \textit{update} OTA yang didukung oleh \textit{platform} ThingsBoard untuk distribusi \textit{firmware} secara efisien.
+
+  
+\section{Rumusan Masalah}
+Berdasarkan latar belakang yang telah diuraikan, terdapat beberapa permasalahan utama dalam pemantauan ketinggian air tangki rumah tangga, yaitu:
+\begin{enumerate}
+    \item Kurangnya pemantauan real-time terhadap ketinggian air, yang menyebabkan risiko kekurangan air atau pemborosan akibat ketidaktahuan tingkat air secara tepat waktu.
+    \item Ketergantungan pada sistem manual yang memerlukan pengecekan fisik secara berkala, sehingga tidak efisien dan rentan terhadap kesalahan manusia.
+    \item Kesulitan dalam melakukan pembaruan dan pemeliharaan firmware perangkat IoT secara remote, yang memerlukan intervensi fisik dan berpotensi menimbulkan downtime sistem.
+    \item Keterbatasan akses data monitoring yang terintegrasi, sehingga pengguna sulit dalam mengambil keputusan otomatisasi rumah tangga cerdas berdasarkan data historis atau real-time.
+\end{enumerate}
+
+\section{Tujuan}
+Proyek ini bertujuan untuk mengatasi rumusan masalah di atas melalui pencapaian tujuan-tujuan berikut:
+\begin{enumerate}
+    \item Mengembangkan sistem pemantauan ketinggian air secara \textit{real-time} menggunakan sensor pada ESP32-S3 yang terintegrasi dengan \textit{dashboard} ThingsBoard, untuk mengurangi risiko kekurangan atau pemborosan air.
+    \item Mengimplementasikan mekanisme otomatisasi berbasis IoT yang menggantikan pengecekan manual, sehingga meningkatkan efisiensi dan mengurangi kesalahan operasional.
+    \item Menambahkan fitur \textit{Over-The-Air} (OTA) untuk pembaruan \textit{firmware remote} pada ESP32-S3, yang memungkinkan pemeliharaan tanpa intervensi fisik dan meminimalkan \textit{downtime}.
+    \item Menyediakan integrasi data yang komprehensif melalui ThingsBoard, termasuk penyimpanan historis dan notifikasi otomatis, untuk mendukung pengambilan keputusan dalam otomasi rumah tangga cerdas.
+\end{enumerate}
+
+\section{Manfaat}
+Implementasi sistem ini diharapkan memberikan manfaat sebagai berikut:
+\begin{enumerate}
+    \item Penghematan penggunaan air hingga $>$20-30\% melalui pemantauan \textit{real-time} dan peringatan otomatis, sehingga mengurangi pemborosan dan memastikan ketersediaan air yang optimal.
+    \item Peningkatan efisiensi waktu bagi pengguna rumah tangga, karena tidak perlu pengecekan manual, serta kemudahan akses data melalui \textit{dashboard mobile} atau web.
+    \item Kemudahan pemeliharaan sistem IoT dengan fitur OTA, yang mengurangi biaya operasional dan memungkinkan peningkatan fitur baru tanpa mengganggu fungsi utama.
+    \item Dukungan bagi konsep \textit{smart home} yang lebih cerdas, dengan potensi integrasi lanjutan seperti pengendalian pompa air otomatis berdasarkan data monitoring, sehingga meningkatkan kenyamanan dan keberlanjutan lingkungan rumah tangga.
+\end{enumerate}
+
+% ==========================================================
+\chapter{TINJAUAN PUSTAKA}
+
+\section{State of The Art}
+
+\subsection*{2.1.1 ``Respiratory Pressure and Flow Data Collection Device Providing a Comprehensive and Accurate Dataset for Machine Learning Applications'' --- A. C. Silva et al. (2025)}
+
+Penelitian ini berfokus pada pengembangan perangkat akuisisi data tekanan dan aliran pernapasan untuk mendukung pembuatan dataset berkualitas bagi aplikasi pembelajaran mesin. Metodologi yang digunakan meliputi perancangan rangkaian sensor tekanan diferensial dan sensor aliran, kalibrasi multi-sensor dengan \textit{closed-loop feedback}, serta pipeline pengumpulan data real-time menggunakan mikrokontroler. Data yang dikumpulkan diproses pada tingkat \textit{edge} dan diekspor melalui antarmuka digital ke server pengolahan untuk validasi sebelum digunakan pada model pembelajaran mesin. Hasil penelitian menunjukkan bahwa perangkat mampu menghasilkan dataset dengan kesalahan rata-rata kecil (kurang dari 2\%) dan konsistensi tinggi antar-sampel. Pendekatan ini menekankan pentingnya akurasi pengukuran dan integritas data, yang relevan dengan proyek sistem monitoring suhu dan kelembaban berbasis Modbus RTU dan STM32.
+
+\vspace{6pt}
+\subsection*{2.1.2 ``Learning and Programming Challenges of Rust: A Mixed-Methods Study'' --- A. Fernandez, T. Lindholm, K. Olsson (2024)}
+Studi ini menggunakan pendekatan \textit{mixed-methods} untuk mengevaluasi tantangan pembelajaran dan pemrograman Rust pada konteks pengembangan sistem tertanam. Metodologi melibatkan survei terhadap pengembang Rust, analisis forum komunitas daring, serta studi kasus proyek embedded untuk mengidentifikasi hambatan umum seperti sistem \textit{ownership}, \textit{borrowing}, dan \textit{lifetime}. Hasil menunjukkan bahwa meskipun Rust memiliki kurva belajar yang curam, bahasa ini menawarkan keamanan memori dan stabilitas sistem yang jauh lebih baik dibanding C/C++. Hasil ini memperkuat alasan penggunaan Rust pada proyek sistem kontrol terdistribusi berbasis STM32-S3 untuk meningkatkan keandalan perangkat lunak industri.
+
+\vspace{6pt}
+\subsection*{2.1.3 ``Rust’s Memory Safety Model: An Evaluation of Its Effectiveness in Preventing Common Vulnerabilities'' --- J. Oey et al. (2023)}
+Penelitian ini mengevaluasi efektivitas model keamanan memori Rust dalam mencegah kerentanan umum pada perangkat lunak sistem. Metodologi yang digunakan adalah eksperimen komparatif antara implementasi C/C++ dan Rust dengan menguji kasus seperti \textit{buffer overflow}, \textit{race conditions}, dan \textit{null pointer dereference}. Hasil menunjukkan bahwa Rust berhasil mencegah sebagian besar kesalahan yang umum terjadi di C/C++, berkat sistem kepemilikan memori yang ketat dan pengecekan kompiler yang eksplisit. Implikasi bagi sistem tertanam adalah peningkatan keandalan serta pengurangan potensi kesalahan fatal di tingkat perangkat keras.
+
+\vspace{6pt}
+\subsection*{2.1.4. ``The Current State of Research on Malware Written in the Rust Programming Language'' --- R. Praveen \& H. Almobaideen (2023)}
+Makalah ini merupakan tinjauan literatur sistematis mengenai pemanfaatan bahasa Rust dalam pengembangan \textit{malware} modern. Metodologi meliputi analisis dataset malware, studi \textit{reverse engineering}, serta pengelompokan teknik pengembangan yang memanfaatkan fitur Rust seperti \textit{cross-compilation} dan efisiensi manajemen memori. Hasil menunjukkan bahwa Rust memiliki efisiensi tinggi dalam menghasilkan binari yang optimal dan sulit dianalisis. Walaupun konteks penelitian ini adalah keamanan siber, efisiensi kompilasi dan performa rendah-laten dari Rust juga mendukung penggunaannya untuk sistem IoT dan perangkat kontrol industri.
+
+\vspace{6pt}
+\subsection*{2.1.5. ``HC-SR04 Ultrasonic Distance Measurement: Performance Evaluation and Error Reduction Methods'' --- M. T. Hamzah et al. (2022)}
+Penelitian ini mengevaluasi kinerja sensor ultrasonik HC-SR04 dengan berbagai kondisi lingkungan dan teknik pengurangan kesalahan. Metodologi melibatkan pengujian eksperimental menggunakan mikrokontroler ARM dengan variasi suhu, kelembaban, dan jenis permukaan target, serta penerapan \textit{filter digital} (Kalman) dan regresi nonlinier untuk perbaikan hasil pengukuran. Hasil memperlihatkan peningkatan akurasi hingga lebih dari 90\% setelah penerapan filter. Pendekatan ini menunjukkan pentingnya pengolahan sinyal di sisi \textit{edge device} untuk mengurangi noise pada data sensor, yang juga relevan untuk peningkatan kualitas data suhu dan kelembaban pada sistem Modbus RTU dan ThingsBoard.
+
+\vspace{6pt}
+\subsection*{2.1.6. ``An OCF-IoTivity Enabled Smart-Home Optimal Indoor Environment Control System for Energy and Comfort Optimization'' --- A. N. Khan et al. (2023)}
+Penelitian ini mengembangkan sistem rumah pintar berbasis Open Connectivity Foundation (OCF) dan IoTivity untuk mengoptimalkan efisiensi energi serta kenyamanan penghuni. Metodologi melibatkan penerapan Edge Intelligence dan model Deep Learning untuk prediksi konsumsi energi dan kenyamanan termal, serta penggunaan algoritma Firefly yang dimodifikasi dengan pendekatan inertia weight guna menentukan aksi kontrol aktuator secara real-time. Hasil penelitian menunjukkan efisiensi energi meningkat hingga $>$36,82\%, dengan waktu respons 5 s dan Round Trip Time sebesar 3,36 ms. Pendekatan ini menegaskan pentingnya integrasi pembelajaran mesin di sisi edge device untuk mencapai kontrol rumah pintar yang aman, efisien, dan interoperabel.
+
+\vspace{6pt}
+\subsection*{2.1.7. ``Deep Learning-Based Payload Optimization for Image Transmission over LoRa with HARQ'' --- K. Z. Islam et al. (2025)}
+Penelitian ini mengusulkan pipeline Deep Learning untuk optimasi pengiriman citra melalui jaringan LoRa berkecepatan rendah. Metodologi mencakup penerapan Siamese Network untuk mendeteksi perbedaan antar gambar sebelum transmisi, serta penggunaan Hybrid Automatic Repeat Request (HARQ) guna meningkatkan keandalan komunikasi. Kompresi dan rekonstruksi citra dilakukan dengan Principal Component Analysis (PCA) dan Enhanced Super-Resolution GAN (ESRGAN). Hasil penelitian memperlihatkan keberhasilan sistem dalam mengurangi payload secara signifikan dengan throughput mencapai $>$100\% pada lokasi pertama dan $>$98,3\% pada lokasi kedua. Pendekatan ini menunjukkan potensi besar LoRa untuk aplikasi visual IoT seperti pemantauan dan pengawasan jarak jauh dengan efisiensi tinggi.
+
+\vspace{6pt}
+\subsection*{2.1.8. ``DDoSViT: IoT DDoS Attack Detection for Fortifying Firmware OTA Updates Using Vision Transformer'' --- M. Ali et al. (2025)}
+
+Penelitian ini berfokus pada deteksi serangan Distributed Denial-of-Service (DDoS) selama proses Over-The-Air (OTA) firmware update pada perangkat IoT. Metodologi menggunakan Vision Transformer (ViT) untuk mengonversi aliran data jaringan menjadi citra visual, kemudian mengklasifikasikannya berdasarkan pola serangan. Model dilatih menggunakan dataset CICIoT2023 dan CICIoMT2024 yang mencakup berbagai skenario serangan nyata. Hasil penelitian menunjukkan akurasi deteksi sebesar $>$99,5\% terhadap 23 varian serangan DoS dan DDoS, dengan tingkat false positive yang sangat rendah. Pendekatan ini memperkuat keamanan OTA firmware update dan menunjukkan efektivitas arsitektur transformer dalam analisis lalu lintas jaringan IoT.
+
+\vspace{6pt}
+\subsection*{2.1.9. ``Remote Automated Control and Monitoring Water Distribution System Utilizing a 3-Way Valve Logic on ThingsBoard Platform'' --- S. Sahlan et al. (2024)}
+
+Penelitian ini merancang sistem kontrol otomatis skala laboratorium untuk distribusi air dengan logika 3-way valve yang diintegrasikan dengan platform ThingsBoard sebagai SCADA. Metodologi menggunakan PANASONIC FP7 PLC sebagai pengendali utama dengan sensor level dan aliran, serta Variable Speed Drive (VSD) untuk pengaturan kecepatan pompa. Node-RED dimanfaatkan sebagai Human Machine Interface (HMI) alternatif untuk kontrol jarak jauh berbasis web. Hasil penelitian menunjukkan sistem mampu mengatur ketinggian air dan laju aliran secara otomatis berdasarkan masukan sensor. Implementasi ThingsBoard dan Node-RED memungkinkan pemantauan real-time yang efisien, mengurangi kesalahan manusia, serta meningkatkan keandalan pengelolaan air.
+
+\vspace{6pt}
+\subsection*{2.1.10. ``BeeLive: The IoT Platform of Beemon Monitoring and Alerting System for Beehives'' --- A. S. Hamza et al. (2023)}
+Penelitian ini mengembangkan BeeLive, platform IoT untuk sistem pemantauan sarang lebah dalam proyek Appalachian Multi-Apiary Informatics System (AppMAIS). Metodologi melibatkan integrasi sensor suhu, kelembapan, berat, mikrofon, dan kamera video pada 28 sarang lebah yang terhubung melalui protokol MQTT ke ThingsBoard Dashboard. Sistem juga dilengkapi rule engine untuk pengiriman peringatan otomatis jika terjadi anomali sensor atau perubahan perilaku lebah. Hasil penelitian memperlihatkan bahwa BeeLive mampu memantau kondisi sarang secara real-time dengan notifikasi otomatis, mengurangi kebutuhan inspeksi manual, serta menyediakan data berkelanjutan bagi penelitian ekologi lebah. Pendekatan ini memperkuat konsep Precision Beekeeping berbasis IoT yang efisien dan skalabel.
+
+\vspace{6pt}
+\subsection*{2.1.11. ``Over-the-Air Firmware Update for IoT Devices on the Wild'' --- Maria Júlia Berriel de Sousa et al. (2022)}
+
+Penelitian ini mengusulkan dan mengimplementasikan metode pembaruan firmware over-the-air (OTA) untuk perangkat IoT berdasarkan arsitektur standar IETF RFC 9019. Metodologi meliputi pengujian sistem pada testbed berisi 20 perangkat IoT di lingkungan LAN serta penerapan nyata di jaringan WAN industri restoran menggunakan open-source cloud platform. Hasil cloud platform. Hasil penelitian menunjukkan bahwa pembaruan firmware dapat dilakukan tanpa gangguan signifikan terhadap lalu lintas jaringan maupun aplikasi perangkat. Pendekatan berbasis HTTP ini menegaskan kelayakan arsitektur IETF untuk perangkat terbatas dan pentingnya standarisasi OTA bagi keandalan sistem IoT.
+
+\vspace{6pt}
+\subsection*{2.1.12. ``Enhancing Flood Verification Using Signal Detection Theory (SDT) and IoT Sensors: A Spatial Scale Evaluation'' --- Claudio Giovando et al. (2024)}
+
+Studi ini bertujuan meningkatkan verifikasi banjir menggunakan kombinasi Signal Detection Theory (SDT) dengan sensor IoT. Metode penelitian menggunakan pendekatan eksperimental berbasis data sensor kelembapan tanah dan curah hujan yang diintegrasikan dengan data satelit, dievaluasi dalam berbagai skala spasial untuk mengukur false alarm rate dan detection probability. Hasil menunjukkan bahwa penerapan SDT secara signifikan mengurangi kesalahan deteksi banjir dan meningkatkan akurasi identifikasi area terdampak hingga lebih dari $>$85\%. Pendekatan ini memperkuat efektivitas sistem IoT berbasis lingkungan dalam mendukung pengambilan keputusan kebencanaan.
+
+\vspace{6pt}
+\subsection*{2.1.12. ``Enhancing Flood Verification Using Signal Detection Theory (SDT) and IoT Sensors: A Spatial Scale Evaluation'' --- Claudio Giovando et al. (2024)}
+Studi ini bertujuan meningkatkan verifikasi banjir menggunakan kombinasi Signal Detection Theory (SDT) dengan sensor IoT. Metode penelitian menggunakan pendekatan eksperimental berbasis data sensor kelembapan tanah dan curah hujan yang diintegrasikan dengan data satelit, dievaluasi dalam berbagai skala spasial untuk mengukur false alarm rate dan detection probability. Hasil menunjukkan bahwa penerapan SDT secara signifikan mengurangi kesalahan deteksi banjir dan meningkatkan akurasi identifikasi area terdampak hingga lebih dari $>$85\%. Pendekatan ini memperkuat efektivitas sistem IoT berbasis lingkungan dalam mendukung pengambilan keputusan kebencanaan.
+
+\vspace{6pt}
+\subsection*{2.1.13. ``Chaos-Based Authentication of Encrypted Images under MQTT for IoT Protocol'' --- P. Sai Anusha et al. (2023)}
+Penelitian ini mengembangkan mekanisme autentikasi berbasis chaos encryption untuk transmisi gambar terenkripsi pada protokol MQTT di lingkungan IoT. Metodologi menggunakan logistic map dan hyperchaotic system untuk mengenkripsi data citra, diintegrasikan dengan sistem autentikasi berbasis hash chaining di lapisan MQTT. Hasil penelitian memperlihatkan peningkatan keamanan dan ketahanan terhadap serangan brute force dan replay attacks dengan efisiensi komputasi tinggi. Sistem yang diusulkan berhasil menjaga integritas data gambar tanpa menambah beban signifikan pada komunikasi MQTT, menjadikannya relevan untuk aplikasi IoT dengan kebutuhan keamanan tinggi seperti pemantauan visual.
+
+\vspace{6pt}
+\subsection*{2.1.14. ``Implementation and Analysis of EMQX Broker for MQTT Protocol in the Internet of Things'' --- Monika Kashyap et al. (2024)}
+Penelitian ini membahas implementasi dan analisis performa EMQX broker sebagai platform komunikasi MQTT dalam sistem IoT. Metodologi melibatkan pengujian eksperimental terhadap berbagai Quality of Service (QoS 0, 1, dan 2) menggunakan parameter kecepatan publikasi, latensi, dan tingkat kehilangan pesan. Hasil menunjukkan bahwa EMQX menawarkan throughput tinggi dan latensi rendah dibanding broker lain seperti HiveMQ dan Mosquitto. Selain itu, QoS 0 menunjukkan konsumsi energi paling efisien, sementara QoS 2 menjamin keandalan tertinggi. Temuan ini memperkuat posisi EMQX sebagai broker optimal untuk aplikasi IoT berskala besar dan real-time.
+
+\vspace{6pt}
+\subsection*{2.1.15. ``Improved Accuracy in IoT-Based Water Quality Monitoring for Aquaculture Tanks Using Low-Cost Sensors: Asian Seabass Fish Farming'' --- Monika Kashyap et al. (2024)}
+Penelitian ini membahas implementasi dan analisis performa EMQX broker sebagai platform komunikasi MQTT dalam sistem IoT. Metodologi melibatkan pengujian eksperimental terhadap berbagai Quality of Service (QoS 0, 1, dan 2) menggunakan parameter kecepatan publikasi, latensi, dan tingkat kehilangan pesan. Hasil menunjukkan bahwa EMQX menawarkan throughput tinggi dan latensi rendah dibanding broker lain seperti HiveMQ dan Mosquitto. Selain itu, QoS 0 menunjukkan konsumsi energi paling efisien, sementara QoS 2 menjamin keandalan tertinggi. Temuan ini memperkuat posisi EMQX sebagai broker optimal untuk aplikasi IoT berskala besar dan real-time.
+
+\vspace{6pt}
+\subsection*{2.1.16. ``Low Cost, LoRa Based River Water Level Data Acquisition System'' --- J.N. Kabi et al. (2023)}
+Penelitian ini merancang sistem pemantauan ketinggian air sungai berbiaya rendah berbasis LoRaWAN guna mendukung konservasi lingkungan dan penelitian hidrologi di wilayah berkembang.
+Metode Penelitian: Sistem dibangun menggunakan modul Multitech mDot (ARM-Mbed) yang dikombinasikan dengan sensor ultrasonik US-100, panel surya, serta koneksi ke The Things Network (TTN) untuk transmisi data nirkabel. Data dianalisis menggunakan model machine learning seperti SVM, KDE, dan K-Means untuk mendeteksi anomali. Hasil Setelah 18 bulan pengujian di Sungai Muringato (Kenya), sistem menunjukkan performa stabil, hemat daya, dan akurat dengan biaya total sekitar USD 90. Solusi ini membuktikan efektivitas IoT berbiaya rendah untuk pemantauan lingkungan berkelanjutan.
+
+\vspace{6pt}
+\subsection*{2.1.17. ``Smart Two-Tank Water Quality and Level Detection System via IoT'' --- S.C. Olisa et al. (2021)}
+Penelitian ini mengembangkan sistem dua tangki air pintar berbasis Internet of Things (IoT) yang mampu mendeteksi level dan kualitas air secara otomatis untuk mengurangi pemborosan air rumah tangga. Sistem menggunakan sensor ultrasonik pulse-echo untuk mengukur tinggi air serta sensor pH dan turbidity untuk menilai kualitas air. Algoritma kontrol cerdas berbasis tiga kondisi level (LC$_1$--LC$_3$) dan dua kondisi kualitas (QC$_1$--QC$_2$) mengatur katup otomatis dan pompa air melalui Aplikasi Android dan Firebase. Hasil Sistem mencapai error pengukuran $<10\%$ dan waktu respon rata-rata 3 detik, dengan performa yang masih bergantung pada kualitas sinyal internet. Pendekatan ini efektif dalam penghematan air dan peningkatan kendali otomatis berbasis IoT di rumah tangga.
+
+
+\vspace{6pt}
+\subsection*{2.1.18. ``LevelWAN: A Cost-Effective, Open-Source IoT System for Water Level Monitoring in Highly Dynamic Aquatic Environments'' --- I. Cherif et al. (2025)}
+Penelitian ini memperkenalkan LevelWAN, sistem pemantauan ketinggian air open-source yang hemat biaya dan dirancang untuk lingkungan perairan dinamis seperti sungai dan danau.
+Metode Penelitian: Sistem dikembangkan menggunakan Arduino MKR WAN 1310, sensor ultrasonik JSN-SR04T, sensor suhu DS18B20, RTC DS3231, serta panel surya 3W. Data dikirim melalui LoRaWAN ke The Things Network (TTN) dan disimpan di Google Sheets secara real-time. Hasil uji lapangan selama 3 tahun menunjukkan akurasi pengukuran <1 cm dibanding sensor profesional dan konsumsi daya hanya 47 µA dalam mode tidur. LevelWAN menawarkan solusi tangguh, murah, dan dapat direplikasi untuk penelitian, pendidikan, serta citizen science di bidang hidrologi.
+
+\vspace{6pt}
+\subsection*{2.1.19. ``Using Stream Processing for Real-Time Clock Drift Correction in Distributed Data Processing Systems'' --- R. Moravskyi \& Y. Levus (2024)}
+Penelitian ini mengusulkan pendekatan koreksi clock drift secara real-time menggunakan teknologi stream processing untuk sistem data terdistribusi berskala besar seperti smart grid dan metering systems.
+Metode Penelitian: Sistem dibangun dengan Apache Kafka sebagai message broker, Apache Flink untuk pemrosesan aliran data, dan OpenSearch untuk penyimpanan berkecepatan tinggi. Koreksi waktu dilakukan secara kontinu dengan tumbling windows untuk menjaga sinkronisasi antarperangkat. Hasil Uji performa menunjukkan sistem mempertahankan latensi rendah, throughput tinggi, dan backpressure minimal di berbagai kondisi beban. Pendekatan ini efektif meningkatkan akurasi temporal dan keandalan data real-time dalam jaringan perangkat cerdas berskala besar.
+
+\vspace{6pt}
+\subsection*{2.1.20. ``Automatic Real-Time Control of Magnetic Field in an Optical Atomic Clock'' --- M. Zarei et al. (2022)}
+Penelitian ini memperkenalkan perangkat kompak untuk pengendalian medan magnet secara otomatis dan real-time dalam sistem optical atomic clock, yang krusial untuk menjaga kestabilan frekuensi atomik. Sistem menggunakan mikrokontroler NUCLEO-H743ZI2, DAC 16-bit, dan TTL signal interface untuk kontrol arus pada tiga pasang Helmholtz coils. Perangkat diatur melalui Ethernet dan dapat diprogram menggunakan perintah Telnet, memungkinkan kontrol presisi tinggi terhadap arus dan arah medan magnet. Hasil Sistem mampu mengatur arus dalam rentang –3 A hingga +3 A dengan resolusi 1 ms, serta mendukung kompensasi otomatis terhadap variasi medan magnet. Teknologi ini meningkatkan stabilitas frekuensi jam atom optik dan mempercepat proses kalibrasi tanpa intervensi manual.
+
+\vspace{10pt}
+\noindent\textbf{Kesimpulan State of the Art:}
+Berdasarkan kedua puluh penelitian tersebut, dapat disimpulkan bahwa:
+\begin{enumerate}
+\item Rust muncul sebagai bahasa pemrograman unggul untuk sistem tertanam dan IoT berkat model keamanan memori yang ketat, efisiensi kompilasi, serta kemampuan mencegah kerentanan umum seperti buffer overflow, meskipun memiliki kurva belajar yang curam.
+\item Pengolahan data sensor di sisi edge, termasuk kalibrasi multi-sensor, filter digital seperti Kalman, dan integrasi ML/DL, krusial untuk meningkatkan akurasi pengukuran (hingga $>$90-99\%) dan mengurangi noise pada aplikasi monitoring lingkungan seperti suhu, kelembaban, level air, dan kualitas air.
+\item Protokol komunikasi seperti MQTT, LoRa, dan ThingsBoard mendominasi arsitektur IoT untuk pemantauan real-time dan kontrol otomatis, dengan broker seperti EMQX menawarkan throughput tinggi dan latensi rendah, sementara OTA firmware update dan deteksi ancaman (e.g., DDoS via ViT) memperkuat keandalan serta keamanan sistem terdistribusi.
+\item Sistem IoT berbiaya rendah berbasis sensor ultrasonik dan energi surya efektif untuk aplikasi lingkungan dinamis seperti pemantauan sungai atau banjir, dengan akurasi tinggi (<1 cm) dan skalabilitas melalui platform open-source seperti TTN atau Google Sheets.
+\item Integrasi edge intelligence dan stream processing (e.g., Apache Flink) memungkinkan koreksi real-time seperti clock drift dan optimasi payload, mendukung efisiensi energi hingga $>$36\% serta respons cepat (ms-level) pada smart systems untuk kenyamanan dan keberlanjutan.
+\end{enumerate}
+
+% ==========================================================
+\section{Penjelasan Komponen}
+
+Bagian ini menjelaskan komponen utama yang digunakan dalam sistem kami yang menggunakan rangkaian sensor ultrasonic dan ESP-32, yang data pembacaanya akan di upload ke thingsboard cloud dengan penambahan fitur OTA (Over the Air Update).
+
+\subsection{ESP32-S3} \\
+ESP32-S3 merupakan mikrokontroler berbasis arsitektur Xtensa LX7 dengan dukungan dual-core dan kecepatan hingga 240 MHz. Modul ini dilengkapi dengan fitur konektivitas Wi-Fi dan Bluetooth Low Energy (BLE), serta mendukung eksekusi kode berbasis Rust maupun C. Pada proyek ini, ESP32-S3 berfungsi sebagai \textit{edge gateway} yang menghubungkan sensor dengan server cloud melalui jaringan nirkabel. Selain itu, ESP32-S3 mendukung fitur keamanan tingkat tinggi seperti \textit{Secure Boot} dan \textit{Flash Encryption} yang menjaga integritas firmware selama proses komunikasi dan pembaruan sistem.
+
+\vspace{6pt}
+\subsection{HC-SR04 Ultrasonic Sensor} \\
+HC-SR04 merupakan sensor ultrasonik yang digunakan untuk mengukur jarak atau ketinggian permukaan air berdasarkan prinsip pantulan gelombang suara. Sensor ini memiliki dua bagian utama, yaitu \textit{transmitter} (pemancar) dan \textit{receiver} (penerima). Gelombang ultrasonik dikirimkan dan waktu pantulannya diukur untuk menghitung jarak antara sensor dan objek menggunakan rumus dasar:
+\[
+d = \frac{v \times t}{2}
+\]
+di mana \(d\) adalah jarak, \(v\) adalah kecepatan suara (343 m/s pada suhu 20°C), dan \(t\) adalah waktu tempuh bolak-balik gelombang. Sensor ini bekerja dengan tegangan 5 V, memiliki jangkauan 2–400 cm, serta resolusi pengukuran sekitar 0,3 cm. Dalam proyek ini, HC-SR04 digunakan untuk mendeteksi tinggi air waduk dan mengirimkan data ke mikrokontroler ESP32-S3.
+
+\vspace{6pt}
+\subsection{Rust Programming Language} \\
+Rust digunakan sebagai bahasa pemrograman utama untuk mengembangkan firmware pada ESP32-S3. Bahasa ini dikenal dengan fitur \textit{memory safety} tanpa menggunakan \textit{garbage collector}, serta sistem \textit{ownership} dan \textit{borrowing} yang mencegah kesalahan memori seperti \textit{null pointer dereference} atau \textit{data race}. Keunggulan Rust dalam penanganan \textit{concurrency} membuatnya cocok untuk aplikasi real-time embedded system. Dalam implementasi proyek, Rust digunakan untuk mengatur pembacaan data sensor, komunikasi Modbus RTU, serta pengiriman data MQTT secara efisien ke cloud.
+
+\vspace{6pt}
+\subsection{OTA (Over-the-Air Update)} \\
+OTA merupakan metode pembaruan firmware perangkat secara nirkabel tanpa perlu koneksi fisik melalui kabel. Fitur ini memungkinkan pengembang untuk memperbarui versi perangkat lunak, memperbaiki bug, atau menambahkan fitur baru secara jarak jauh. Pada ESP32-S3, OTA diimplementasikan dengan memanfaatkan modul Wi-Fi dan library Rust untuk melakukan verifikasi integritas file melalui \textit{checksum} dan autentikasi token. Keunggulan OTA terletak pada kemudahan pemeliharaan sistem dan peningkatan keandalan perangkat IoT yang tersebar di lapangan.
+
+\vspace{6pt}
+\subsection{ThingsBoard Cloud Platform} \\
+ThingsBoard adalah platform IoT berbasis cloud yang digunakan untuk manajemen perangkat, akuisisi data, dan visualisasi dashboard. Platform ini mendukung berbagai protokol komunikasi seperti MQTT, HTTP, dan CoAP. Dalam sistem ini, ThingsBoard digunakan untuk menampilkan data suhu, kelembaban, dan ketinggian air secara real-time dalam bentuk grafik dan indikator. Selain itu, ThingsBoard menyediakan fitur \textit{rule engine} untuk mengatur alarm atau notifikasi otomatis berdasarkan ambang batas tertentu, serta \textit{device management} yang mempermudah pengawasan beberapa node sensor sekaligus.
+
+\vspace{6pt}
+\subsection{Real-Time Clock (RTC)} \\
+RTC adalah modul yang berfungsi menjaga ketepatan waktu sistem meskipun perangkat dalam kondisi mati atau \textit{power-off}. RTC menggunakan sumber daya baterai eksternal untuk mempertahankan waktu internal, yang penting dalam sistem pengumpulan data berbasis waktu (\textit{time-series}). Pada proyek ini, RTC digunakan untuk memberikan \textit{timestamp} akurat pada setiap data sensor sebelum dikirimkan ke ThingsBoard. Hal ini memastikan kesesuaian waktu antar perangkat dan memudahkan analisis tren historis maupun deteksi anomali.
+
+% ==========================================================
+
+\chapter{METODOLOGI DAN ARSITEKTUR SISTEM}
+
+\section{Komponen Utama}
+\begin{itemize}
+    \item Sensor HCSR04
+    \item ESP32-S3
+    \item Backend Rust
+    \item ThingsBoard
+\end{itemize}
+
+\section{Diagram Arsitektur}
+\begin{figure} [H]
+     \centering
+     \includegraphics[width=0.5\textwidth]{Screenshot 2025-10-14 180739.png}
+     \caption{Diagram Arsitektur}
+     \label{fig:placeholder}
+ \end{figure}
+
+\section{Diagram Alir Sistem}
+\begin{figure} [H]
+     \centering
+     \includegraphics[width=0.25\textwidth]{Diagram Alir Sistem.png}
+     \caption{Diagram Alir Sistem}
+     \label{fig:placeholder}
+ \end{figure}
+
+  \section{Wiring Hardware}
+\begin{figure} [H]
+     \centering
+     \includegraphics[width=0.3\textwidth]{wiring.jpg}
+     \caption{Wiring HCSR04 & ESP32-S3}
+     \label{fig:placeholder}
+ \end{figure}
+
+ \section{Langkah - langkah}
+
+Berikut adalah langkah-langkah praktis untuk rancang bangun sistem IoT monitoring jarak berbasis HC-SR04, ESP32-S3, integrasi ThingsBoard, dan fitur OTA menggunakan bahasa pemrograman Rust pada sistem operasi Ubuntu. Setiap langkah disesuaikan dengan diagram wiring (file '5418c'), diagram arsitektur, dan diagram alir sistem.
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=*, align=left]
+
+\item \textbf{Persiapan Hardware dan Software}: Siapkan hardware seperti ESP32-S3, HC-SR04, jumper wires, dan breadboard sesuai diagram wiring Fritzing. Kemudian di Ubuntu jalankan \texttt{cd ~/Documents/iot}, \texttt{sudo apt update}, \texttt{sudo apt install git curl pkg-config libssl-dev libudev-dev}. Install Rust via \texttt{curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh}, \texttt{cargo install espup --git https://github.com/esp-rs/espup --locked}, \texttt{espup install}, dan \texttt{cargo install cargo-generate ldproxy espflash cargo-espflash}. Serta setup akun ThingsBoard untuk device dan dashboard sesuai diagram arsitektur.
+
+\item \textbf{Wiring Hardware}: Hubungkan HC-SR04 ke ESP32-S3 dengan VCC ke 5V, GND ke GND, Trig ke GPIO 5, dan Echo ke GPIO 18 menggunakan jumper wires pada breadboard.
+
+\item \textbf{Kode Dasar Pembacaan Sensor}: Buat proyek Rust baru dengan \texttt{cargo generate https://github.com/esp-rs/esp-idf-template cargo} (masukkan nama proyek seperti 'project-iot', pilih ESP32-S3, configure advanced template option 'false'). Lalu \texttt{cd project-iot}, buka VS Code dengan \texttt{code .}. Edit \texttt{src/main.rs} menggunakan esp32s3-hal untuk konfigurasi GPIO (trig output push-pull GPIO5, echo input floating GPIO18), timer untuk ukur pulse, dan delay 10$\mu$s trigger. Tambahkan \texttt{Cargo.toml} dependencies dasar seperti esp-idf-sys. Lalu jalankan \texttt{unset IDF\_PATH} jika perlu, \texttt{espup install}, \texttt{cargo build}, dan \texttt{espflash flash target/xtensa-
+esp32s3-espidf/debug/project-iot --monitor} untuk tampilkan jarak di serial monitor setiap 500 ms sesuai awal diagram alir.
+
+\item \textbf{Setup ThingsBoard}: Daftar di thingsboard.cloud via login Google, buka Entities $>$ Devices $>$ Add New Device, beri nama ``ESP32-S3'' dengan credentials MQTT (refresh Client ID seperti 'pe8qc3sr584qzm78ka8f', username 'shelmais', password 'shelma118'). Test koneksi di terminal Ubuntu dengan \texttt{sudo apt install mosquitto-clients} dan \texttt{mosquitto\_pub -d -q 1 -h mqtt.thingsboard.cloud -p 1883 -t v1/devices/me/telemetry -i "pe8qc3sr584qzm78ka8f" -u 
+"shelmais" -P "shelma118" -m "\{distance:10\}"}. Lalu buat dashboard dengan widget Timeseries untuk telemetry ``distance'' guna visualisasi data jarak.
+
+\item \textbf{Integrasi MQTT}: Edit \texttt{main.rs} untuk tambahkan WiFi menggunakan esp-wifi (ubah SSID dan password). MQTT dengan rumqttc dependencies di \texttt{Cargo.toml} (tambah rumqttc, serde-json). Publish data jarak sebagai JSON ke topic ``v1/devices/me/telemetry'' setiap 2 detik dengan esp\_println logging. Integrasikan inisialisasi sensor dan WiFi sesuai diagram alir (Mulai $>$ Inisialisasi Sensor/WiFi/OTA $>$ HC-SR04 Mengukur $>$ Data ke ThingsBoard). Jalankan \texttt{cargo build} dan \texttt{espflash flash --monitor} hingga sukses meski ada error iteratif.
+
+\item \textbf{Implementasi OTA}: Buat file \texttt{buildota.sh} dengan \texttt{cargo build --release}, \texttt{flash.sh} dengan \texttt{espflash flash target/xtensa-esp32s3-espidf/project-iot --monitor}, dan \texttt{partitions.csv} untuk partisi OTA di root proyek. Integrasikan ESP-IDF OTA component via esp-idf-sys di \texttt{Cargo.toml}. Konfigurasi web server HTTP port 80 untuk handle update. Generate .bin dengan \texttt{./buildota.sh} (chmod +x jika error). Lalu update firmware via OTA sesuai diagram alir (Tunggu Interval $>$ Periksa OTA $>$ Proses Update Firmware OTA $>$ Restart Sistem) dan diagram arsitektur (Rust Embedded $>$ Device IoT $>$ MQTT Connectivity $>$ ThingsBoard).
+
+\item \textbf{Pengujian Sistem}: Uji fungsionalitas pembacaan sensor (akurasi $>$95\% via serial monitor), koneksi MQTT/WiFi (update real-time di ThingsBoard), dan OTA (update .bin versi 2 tanpa kabel via \texttt{./flash.sh} atau web server) selama 24 jam sesuai diagram alir lengkap (Mulai $>$ WiFi Terhubung? $>$ Pengukuran $>$ Kirim Data $>$ Periksa OTA $>$ Update Selesai $>$ Restart). Catat error dan iterasi di tabel sambil monitor anomali.
+
+\item \textbf{Penyusunan Laporan}: Susun laporan dengan struktur pendahuluan (latar belakang IoT dengan diagram arsitektur), metodologi (langkah 1-7), hasil pengujian (tabel akurasi/latensi), kesimpulan, serta lampiran kode Rust (\texttt{Cargo.toml}, \texttt{main.rs}), script (\texttt{buildota.sh}, \texttt{flash.sh}), diagram arsitektur/alir/wiring, dan log terminal untuk mendokumentasikan proyek secara lengkap.
+
+\end{enumerate}
+
+% ==========================================================
+\chapter{IMPLEMENTASI SISTEM}
+
+\section{Kode Program Rust Main.rs}
+\begin{lstlisting}[language=Rust,caption={main.rs}]
+// main.rs
+
+#![no_std]
+#![no_main]
+
+use esp_idf_sys::*;
+use esp_idf_hal::{delay::{Delay, Ets}, gpio::*, peripherals::Peripherals};
+use esp_idf_svc::{
+    eventloop::EspSystemEventLoop,
+    nvs::EspDefaultNvsPartition,
+    wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configuration, EspWifi},
+    log::EspLogger,
+    sntp::{EspSntp, SyncStatus},
+};
+use log::{info, error};
+use anyhow::{Result, anyhow};
+use serde_json::{json, Value};
+use alloc::{boxed::Box, string::{String, ToString}, ffi::CString, format, vec::Vec};
+use core::ffi::c_void;
+use sha2::{Digest, Sha256};
+use heapless::String as HeaplessString;
+extern crate alloc;
+
+// Tambahan untuk RTC/time
+use esp_idf_sys::{gettimeofday, timeval, localtime_r, tm, setenv, tzset};
+
+// OTA Constants
+const OTA_REQUEST_TOPIC: &str = "v1/devices/me/attributes/request/";
+const OTA_RESPONSE_TOPIC: &str = "v1/devices/me/attributes/response/";
+const OTA_FIRMWARE_REQUEST_TOPIC: &str = "v2/fw/request";
+const OTA_FIRMWARE_RESPONSE_TOPIC: &str = "v2/fw/response";
+const OTA_TELEMETRY_TOPIC: &str = "v1/devices/me/telemetry";
+
+// OTA Shared Attributes
+const FW_TITLE_ATTR: &str = "fw_title";
+const FW_VERSION_ATTR: &str = "fw_version";
+const FW_SIZE_ATTR: &str = "fw_size";
+const FW_CHECKSUM_ATTR: &str = "fw_checksum";
+const FW_CHECKSUM_ALG_ATTR: &str = "fw_checksum_algorithm";
+const FW_STATE_ATTR: &str = "fw_state";
+
+// Structure to represent distance in centimeters
+#[derive(Debug)]
+struct Distance(f32);
+
+impl Distance {
+    pub fn as_f32(&self) -> f32 {
+        self.0
+    }
+}
+
+#[inline(always)]
+fn ms_to_ticks(ms: u32) -> u32 {
+    (ms as u64 * configTICK_RATE_HZ as u64 / 1000) as u32
+}
+
+#[derive(PartialEq)]
+enum OtaState {
+    Idle,
+    Downloading,
+    Downloaded,
+    Verifying,
+    Updating,
+    Updated,
+    Failed(String),
+}
+
+struct OtaManager {
+    current_fw_title: String,
+    current_fw_version: String,
+    fw_title: Option<String>,
+    fw_version: Option<String>,
+    fw_size: Option<u32>,
+    fw_checksum: Option<String>,
+    fw_checksum_algorithm: Option<String>,
+    ota_state: OtaState,
+    request_id: u32,
+    firmware_request_id: u32,
+    current_chunk: u32,
+    ota_handle: esp_ota_handle_t,
+    ota_partition: *const esp_partition_t,
+    received_size: usize,
+    sha256_hasher: Sha256,
+    partial_firmware_data: Vec<u8>,
+}
+
+impl OtaManager {
+    fn new() -> Self {
+        unsafe {
+            let otadata_partition = esp_partition_find_first(
+                esp_partition_type_t_ESP_PARTITION_TYPE_DATA,
+                esp_partition_subtype_t_ESP_PARTITION_
+                SUBTYPE_DATA_OTA,
+                core::ptr::null(),
+            );
+            if !otadata_partition.is_null() {
+                info!("Found otadata partition at {:p}", otadata_partition);
+            } else {
+                error!("No otadata partition found");
+            }
+
+            let mut ota_partitions_found = 0;
+            for subtype in &[
+                esp_partition_subtype_t_ESP_PARTITION_
+                SUBTYPE_APP_OTA_0,
+                esp_partition_subtype_t_ESP_PARTITION_
+                SUBTYPE_APP_OTA_1,
+            ] {
+                let mut iterator = esp_partition_find(
+                    esp_partition_type_t_ESP_PARTITION_TYPE_APP,
+                    *subtype,
+                    core::ptr::null(),
+                );
+                while !iterator.is_null() {
+                    let partition = esp_partition_get(iterator);
+                    let label = core::ffi::CStr::from_ptr((*partition).
+                    label.as_ptr())
+                        .to_str()
+                        .unwrap_or("unknown");
+                    info!(
+                        "Found OTA partition: {}, subtype: {:?}, address: 0x{:x}, size: 0x{:x}",
+                        label, *subtype, (*partition).address, (*partition).size
+                    );
+                    ota_partitions_found += 1;
+                    iterator = esp_partition_next(iterator);
+                }
+                esp_partition_iterator_release(iterator);
+            }
+            if ota_partitions_found < 2 {
+                error!(
+                    "Insufficient OTA partitions found: {}. Need at least 2 for OTA.",
+                    ota_partitions_found
+                );
+            } else {
+                info!("Found {} OTA partitions, sufficient for OTA", ota_partitions_found);
+            }
+
+            let running_partition = esp_ota_get_running_partition();
+            if !running_partition.is_null() {
+                let label = core::ffi::CStr::from_ptr((*running_
+                partition).label.as_ptr())
+                    .to_str()
+                    .unwrap_or("unknown");
+                info!(
+                    "Current running partition: {}, address: 0x{:x}, size: 0x{:x}",
+                    label, (*running_partition).address, (*running_partition).size
+                );
+            } else {
+                error!("No running partition detected");
+            }
+        }
+
+        Self {
+            current_fw_title: "Water Level Sensor".to_string(),
+            current_fw_version: "V1.0".to_string(),
+            fw_title: None,
+            fw_version: None,
+            fw_size: None,
+            fw_checksum: None,
+            fw_checksum_algorithm: None,
+            ota_state: OtaState::Idle,
+            request_id: 0,
+            firmware_request_id: 0,
+            current_chunk: 0,
+            ota_handle: 0,
+            ota_partition: core::ptr::null(),
+            received_size: 0,
+            sha256_hasher: Sha256::new(),
+            partial_firmware_data: Vec::new(),
+        }
+    }
+
+    fn handle_shared_attributes(&mut self, attributes: &str, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        let attrs: Value = serde_json::from_str(attributes)?;
+        info!("Raw attributes received: {}", attributes);
+
+        let shared_attrs = attrs
+            .get("shared")
+            .ok_or_else(|| anyhow!("Missing 'shared' object in attributes"))?;
+
+        if let Some(fw_title) = shared_attrs.get(FW_TITLE_ATTR).and_then(|v| v.as_str()) {
+            self.fw_title = Some(fw_title.trim().to_string());
+            info!("Received fw_title: '{}'", fw_title);
+        }
+        if let Some(fw_version) = shared_attrs.get(FW_VERSION_ATTR).and_then(|v| v.as_str()) {
+            self.fw_version = Some(fw_version.trim().to_string());
+            info!("Received fw_version: '{}'", fw_version);
+        }
+        if let Some(fw_size) = shared_attrs.get(FW_SIZE_ATTR).and_then(|v| v.as_u64()) {
+            self.fw_size = Some(fw_size as u32);
+            info!("Received fw_size: {}", fw_size);
+        }
+        if let Some(fw_checksum) = shared_attrs.get(FW_CHECKSUM_ATTR).and_then(|v| v.as_str()) {
+            self.fw_checksum = Some(fw_checksum.trim().to_string());
+            info!("Received fw_checksum: '{}'", fw_checksum);
+        }
+        if let Some(fw_checksum_alg) = shared_attrs
+            .get(FW_CHECKSUM_ALG_ATTR)
+            .and_then(|v| v.as_str())
+        {
+            self.fw_checksum_algorithm = Some(fw_checksum_alg.trim().to_string());
+            info!("Received fw_checksum_algorithm: '{}'", fw_checksum_alg);
+        }
+
+        let mut result = Ok(());
+        if let (Some(fw_title), Some(fw_version)) = (&self.fw_title, &self.fw_version) {
+            info!(
+                "Comparing fw_title: '{}' vs '{}', fw_version: '{}' vs '{}'",
+                fw_title, self.current_fw_title, fw_version, self.current_fw_version
+            );
+            if fw_title.trim() != self.current_fw_title.trim()
+                || fw_version.trim() != self.current_fw_version.trim()
+            {
+                info!("New firmware available: {} {}", fw_title, fw_version);
+                self.ota_state = OtaState::Downloading;
+                self.firmware_request_id += 1;
+                self.current_chunk = 0;
+                self.received_size = 0;
+                self.sha256_hasher = Sha256::new();
+                unsafe {
+                    self.ota_partition = esp_ota_get_next_update_partition(core:
+                    :ptr::null());
+                    if self.ota_partition.is_null() {
+                        error!("esp_ota_get_next_update_partition failed. Attempting manual partition selection...");
+                        let running_partition = esp_ota_get_running_partition();
+                        if !running_partition.is_null() {
+                            let label = core::ffi::CStr::from_ptr
+                            ((*running_partition).label.as_ptr())
+                                .to_str()
+                                .unwrap_or("unknown");
+                            info!("Running partition: {}, address: 0x{:x}", label, (*running_partition).address);
+                        } else {
+                            error!("No running partition detected");
+                        }
+
+                        for subtype in &[
+                            esp_partition_subtype_t_
+                            ESP_PARTITION_SUBTYPE_APP_OTA_0,
+                            esp_partition_subtype_t_
+                            ESP_PARTITION_SUBTYPE_APP_OTA_1,
+                        ] {
+                            let mut iterator = esp_partition_find(
+                                esp_partition_type_t_
+                                ESP_PARTITION_TYPE_APP,
+                                *subtype,
+                                core::ptr::null(),
+                            );
+                            while !iterator.is_null() {
+                                let partition = esp_partition_get(iterator);
+                                let label = core::ffi::CStr::from_ptr
+                                ((*partition).label.as_ptr())
+                                    .to_str()
+                                    .unwrap_or("unknown");
+                                info!(
+                                    "Checking partition: {}, subtype: {:?}, address: 0x{:x}",
+                                    label, *subtype, (*partition).address
+                                );
+                                if !running_partition.is_null() && partition != running_partition {
+                                    self.ota_partition = partition;
+                                    break;
+                                }
+                                iterator = esp_partition_next(iterator);
+                            }
+                            esp_partition_iterator_
+                            release(iterator);
+                            if !self.ota_partition.is_null() {
+                                break;
+                            }
+                        }
+                    }
+
+                    if self.ota_partition.is_null() {
+                        error!("No valid OTA partition found for update");
+                        self.ota_state = OtaState::Failed("No valid OTA partition found".to_string());
+                        result = Err(anyhow!("No valid OTA partition found"));
+                    } else {
+                        let label = core::ffi::CStr::from_ptr
+                        ((*self.ota_partition).label.as_ptr())
+                            .to_str()
+                            .unwrap_or("unknown");
+                        info!(
+                            "Selected OTA partition: {}, address: 0x{:x}, size: 0x{:x}",
+                            label, (*self.ota_partition).address, (*self.ota_partition).size
+                        );
+
+                        let res = esp_partition_erase_range
+                        (self.ota_partition, 0, (*self.ota_partition).size as usize);
+                        if res != ESP_OK {
+                            self.ota_state = OtaState::Failed(format!
+                            ("Failed to erase OTA partition: {}", res));
+                            result = Err(anyhow!("Failed to erase OTA partition: {}", res));
+                        } else {
+                            let res = esp_ota_begin(self.ota_partition, self.fw_size.unwrap_or(0) as usize, &mut self.ota_handle);
+                            if res != ESP_OK {
+                                self.ota_state = OtaState::Failed(format!("Failed to begin OTA: {}", res));
+                                result = Err(anyhow!("Failed to begin OTA: {}", res));
+                            } else {
+                                if let Err(e) = self.request_firmware_
+                                chunk(mqtt_client) {
+                                    self.ota_state = OtaState::Failed(format!("Failed to request firmware chunk: {}", e));
+                                    result = Err(e);
+                                }
+                            }
+                        }
+                    }
+                    if let Err(e) = self.send_ota_telemetry(mqtt_client) {
+                        error!("Failed to send OTA telemetry: {:?}", e);
+                    }
+                }
+            } else {
+                info!("No new firmware detected: title and version match current");
+            }
+        } else {
+            info!(
+                "Incomplete firmware attributes: fw_title={:?}, fw_version={:?}",
+                self.fw_title, self.fw_version
+            );
+            result = Err(anyhow!("Incomplete firmware attributes received"));
+        }
+        result
+    }
+
+    fn request_firmware_info(&mut self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        self.request_id += 1;
+        let request_topic = format!("{}{}", OTA_REQUEST_TOPIC, self.request_id);
+        let payload = json!({
+            "sharedKeys": format!(
+                "{},{},{},{},{}",
+                FW_TITLE_ATTR, FW_VERSION_ATTR, FW_SIZE_ATTR, FW_CHECKSUM_ATTR, FW_CHECKSUM_ALG_ATTR
+            )
+        });
+        Self::mqtt_publish(mqtt_client, &request_topic, &payload.to_string())?;
+        info!("Requested firmware info, topic: {}", request_topic);
+        Ok(())
+    }
+
+    fn request_firmware_chunk(&mut self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        if let Some(fw_size) = self.fw_size {
+            if self.received_size >= fw_size as usize {
+                info!("All firmware chunks received, no further requests needed");
+                return Ok(());
+            }
+        }
+        let topic = format!(
+            "{}/{}/chunk/{}",
+            OTA_FIRMWARE_REQUEST_TOPIC, self.firmware_request_id, self.current_chunk
+        );
+        let payload = "1024".to_string();
+        Self::mqtt_publish(mqtt_client, &topic, &payload)?;
+        info!("Requested firmware chunk {}, topic: {}", self.current_chunk, topic);
+        Ok(())
+    }
+
+    fn handle_firmware_chunk(&mut self, data: &[u8], chunk_index: u32, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        if chunk_index != self.current_chunk {
+            error!(
+                "Received chunk {} but expected chunk {}, ignoring",
+                chunk_index, self.current_chunk
+            );
+            return Ok(());
+        }
+
+        if data.is_empty() {
+            if self.received_size == self.fw_size.unwrap_or(0) as usize {
+                info!("Received empty chunk, download complete");
+                self.ota_state = OtaState::Downloaded;
+                unsafe {
+                    let res = esp_ota_end(self.ota_handle);
+                    if res != ESP_OK {
+                        self.ota_state = OtaState::Failed(format!("Failed to end OTA: {}", res));
+                        self.send_ota_telemetry(mqtt_client)?;
+                        return Err(anyhow!("Failed to end OTA: {}", res));
+                    }
+                }
+                self.process_firmware(mqtt_client)?;
+                return Ok(());
+            } else {
+                self.ota_state = OtaState::Failed("Received empty chunk but size mismatch".to_string());
+                self.send_ota_telemetry(mqtt_client)?;
+                return Err(anyhow!("Empty chunk received prematurely"));
+            }
+        }
+
+        self.received_size += data.len();
+        info!(
+            "Received chunk {}, size: {}, total received: {}",
+            self.current_chunk, data.len(), self.received_size
+        );
+
+        if let Some(fw_size) = self.fw_size {
+            let percentage = (self.received_size as f32 / fw_size as f32) * 100.0;
+            info!(
+                "Download progress: {:.2}% ({} / {})",
+                percentage, self.received_size, fw_size
+            );
+            if self.received_size >= fw_size as usize {
+                info!(
+                    "Download complete: received {} bytes of {} bytes",
+                    self.received_size, fw_size
+                );
+            } else {
+                info!(
+                    "Download not complete: received {} bytes, need {} bytes",
+                    self.received_size, fw_size
+                );
+            }
+        }
+
+        self.sha256_hasher.update(data);
+        unsafe {
+            let res = esp_ota_write(self.ota_handle, data.as_ptr() as *const c_void, data.len());
+            if res != ESP_OK {
+                self.ota_state = OtaState::Failed(format!("Failed to write OTA data: {}", res));
+                self.send_ota_telemetry(mqtt_client)?;
+                return Err(anyhow!("Failed to write OTA data: {}", res));
+            }
+        }
+
+        self.current_chunk += 1;
+        if let Some(fw_size) = self.fw_size {
+            if self.received_size >= fw_size as usize {
+                self.ota_state = OtaState::Downloaded;
+                unsafe {
+                    let res = esp_ota_end(self.ota_handle);
+                    if res != ESP_OK {
+                        self.ota_state = OtaState::Failed(format!("Failed to end OTA: {}", res));
+                        self.send_ota_telemetry(mqtt_client)?;
+                        return Err(anyhow!("Failed to end OTA: {}", res));
+                    }
+                }
+                self.process_firmware(mqtt_client)?;
+            } else {
+                self.request_firmware_chunk(mqtt_client)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn process_firmware(&mut self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        self.ota_state = OtaState::Verifying;
+        self.send_ota_telemetry(mqtt_client)?;
+
+        if let Some(checksum) = &self.fw_checksum {
+            let computed_checksum = {
+                let result = self.sha256_hasher.clone().finalize();
+                result.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+            };
+            info!("Computed checksum: {}, Expected checksum: {}", computed_checksum, checksum);
+            if computed_checksum == *checksum {
+                self.ota_state = OtaState::Updating;
+                self.send_ota_telemetry(mqtt_client)?;
+                unsafe {
+                    let res = esp_ota_set_boot_partition(self.ota_partition);
+                    if res != ESP_OK {
+                        self.ota_state = OtaState::Failed(format!("Failed to set boot partition: {}", res));
+                        self.send_ota_telemetry(mqtt_client)?;
+                        return Err(anyhow!("Failed to set boot partition: {}", res));
+                    }
+                }
+                self.current_fw_title = self.fw_title.clone().unwrap_or_default();
+                self.current_fw_version = self.fw_version.clone().unwrap_or_default();
+                self.ota_state = OtaState::Updated;
+                self.send_ota_telemetry(mqtt_client)?;
+                info!("Firmware update successful, restarting...");
+                unsafe { esp_restart(); }
+            } else {
+                self.ota_state = OtaState::Failed("Checksum verification failed".to_string());
+                self.send_ota_telemetry(mqtt_client)?;
+                return Err(anyhow!("Checksum verification failed"));
+            }
+        } else {
+            self.ota_state = OtaState::Failed("No checksum provided".to_string());
+            self.send_ota_telemetry(mqtt_client)?;
+            return Err(anyhow!("No checksum provided"));
+        }
+    }
+
+    fn send_ota_telemetry(&self, mqtt_client: *mut esp_mqtt_client) -> Result<()> {
+        let payload = match &self.ota_state {
+            OtaState::Idle => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "IDLE"
+            })
+            .to_string(),
+            OtaState::Downloading => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "DOWNLOADING"
+            })
+            .to_string(),
+            OtaState::Downloaded => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "DOWNLOADED"
+            })
+            .to_string(),
+            OtaState::Verifying => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "VERIFYING"
+            })
+            .to_string(),
+            OtaState::Updating => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "UPDATING"
+            })
+            .to_string(),
+            OtaState::Updated => json!({
+                "current_fw_title": &self.current_fw_title,
+                "current_fw_version": &self.current_fw_version,
+                FW_STATE_ATTR: "UPDATED"
+            })
+            .to_string(),
+            OtaState::Failed(error) => json!({
+                FW_STATE_ATTR: "FAILED",
+                "fw_error": error
+            })
+            .to_string(),
+        };
+        Self::mqtt_publish(mqtt_client, OTA_TELEMETRY_TOPIC, &payload)?;
+        info!("Sent OTA telemetry: {}", payload);
+        Ok(())
+    }
+
+    fn mqtt_publish(mqtt_client: *mut esp_mqtt_client, topic: &str, data: &str) -> Result<()> {
+        unsafe {
+            let topic_cstr = CString::new(topic)?;
+            let data_cstr = CString::new(data)?;
+            let msg_id = esp_mqtt_client_publish(
+                mqtt_client,
+                topic_cstr.as_ptr(),
+                data_cstr.as_ptr(),
+                data.len() as i32,
+                1,
+                0,
+            );
+            if msg_id < 0 {
+                Err(anyhow!("Failed to publish message to {}: {}", topic, msg_id))
+            } else {
+                info!("Published message to {} with ID: {}", topic, msg_id);
+                Ok(())
+            }
+        }
+    }
+}
+
+struct SimpleMqttClient {
+    client: *mut esp_mqtt_client,
+}
+
+impl SimpleMqttClient {
+    fn new(
+        broker_url: &str,
+        username: &str,
+        password: &str,
+        client_id: &str,
+        ota_manager_ptr: *mut OtaManager,
+    ) -> Result<Self> {
+        unsafe {
+            let broker_url_cstr = CString::new(broker_url)?;
+            let username_cstr = CString::new(username)?;
+            let password_cstr = CString::new(password)?;
+            let client_id_cstr = CString::new(client_id)?;
+            let config = esp_mqtt_client_config_t {
+                broker: esp_mqtt_client_config_t_broker_t {
+                    address: esp_mqtt_client_config_t_broker_t_address_t {
+                        uri: broker_url_cstr.as_ptr(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                credentials: esp_mqtt_client_config_t_credentials_t {
+                    username: username_cstr.as_ptr(),
+                    client_id: client_id_cstr.as_ptr(),
+                    authentication: esp_mqtt_client_config_t_credentials_t_
+                    authentication_t 
+                    {
+                        password: password_cstr.as_ptr(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                buffer: esp_mqtt_client_config_t_buffer_t {
+                    size: 4096,
+                    out_size: 4096,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let client = esp_mqtt_client_init(&config);
+            if client.is_null() {
+                return Err(anyhow!("Failed to initialize MQTT client"));
+            }
+            esp_mqtt_client_register_event(
+                client,
+                esp_mqtt_event_id_t_MQTT_EVENT_ANY,
+                Some(Self::mqtt_event_handler),
+                ota_manager_ptr as *mut c_void,
+            );
+            let err = esp_mqtt_client_start(client);
+            if err != ESP_OK {
+                esp_mqtt_client_destroy(client);
+                return Err(anyhow!("Failed to start MQTT client, error code: {}", err));
+            }
+            vTaskDelay(ms_to_ticks(5000));
+            Ok(Self { client })
+        }
+    }
+
+    extern "C" fn mqtt_event_handler(
+        handler_args: *mut c_void,
+        _base: *const u8,
+        event_id: i32,
+        event_data: *mut c_void,
+    ) {
+        unsafe {
+            let ota_manager = handler_args as *mut OtaManager;
+            if ota_manager.is_null() {
+                error!("OTA manager pointer is null");
+                return;
+            }
+            let event = &*(event_data as *mut esp_mqtt_event_t);
+            if event_id == esp_mqtt_event_id_t_MQTT_EVENT_DATA as i32 {
+                let topic_len = event.topic_len as usize;
+                let data_len = event.data_len as usize;
+                if topic_len > 0 && data_len > 0 {
+                    let topic_slice = core::slice::from_raw_parts(event.topic as *const u8, topic_len);
+                    let topic = core::str::from_utf8(topic_slice).
+                    unwrap_or("");
+                    info!("Received MQTT message on topic: {}", topic);
+                    let data_slice = core::slice::from_raw_parts(event.data as *const u8, data_len);
+                    if topic.starts_with(OTA_RESPONSE_TOPIC) {
+                        if let Ok(data_str) = core::str::from_utf8(data_slice) {
+                            info!("OTA response data: {}", data_str);
+                            if let Err(e) = (*ota_manager).handle_shared_
+                            attributes(data_str, event.client) {
+                                error!("Failed to handle OTA attributes: {:?}", e);
+                            }
+                        } else {
+                            error!("Invalid UTF-8 in OTA response");
+                        }
+                    } else if topic.starts_with(&format!(
+                        "{}/{}/",
+                        OTA_FIRMWARE_RESPONSE_TOPIC, (*ota_manager).firmware_request_id
+                    )) {
+                        let total_len = event.total_data_len as usize;
+                        let offset = event.current_data_offset as usize;
+                        let chunk_data_len = event.data_len as usize;
+                        let data_slice = core::slice::from_raw_parts(event.data as *const u8, chunk_data_len);
+
+                        if offset == 0 {
+                            (*ota_manager).partial_firmware_data.
+                            clear();
+                            (*ota_manager).partial_firmware_data.
+                            extend_from_slice(data_slice);
+                        } else {
+                            (*ota_manager).partial_firmware_data.
+                            extend_from_slice(data_slice);
+                        }
+
+                        if offset + chunk_data_len >= total_len {
+                            let topic_parts: Vec<&str> = topic.split('/').collect();
+                            if let Some(chunk_str) = topic_parts.last() {
+                                if let Ok(chunk_index) = chunk_str.parse::<u32>() {
+                                    info!(
+                                        "Received complete firmware chunk for request ID: {}, chunk: {}, data length: {}",
+                                        (*ota_manager).
+                                        firmware_request_id, chunk_index, (*ota_manager).
+                                        partial_firmware_data.len()
+                                    );
+                                    if let Err(e) = (*ota_manager).handle_
+                                    firmware_chunk(
+                                        &(*ota_manager).
+                                        partial_firmware_data,
+                                        chunk_index,
+                                        event.client,
+                                    ) {
+                                        error!("Failed to handle firmware chunk: {:?}", e);
+                                    }
+                                } else {
+                                    error!("Invalid chunk index in topic: {}", topic);
+                                }
+                            }
+                            (*ota_manager).partial_
+                            firmware_data.clear();
+                        }
+                    } else {
+                        info!("Received MQTT message on unexpected topic: {}", topic);
+                    }
+                }
+            }
+        }
+    }
+
+    fn publish(&self, topic: &str, data: &str) -> Result<()> {
+        OtaManager::mqtt_publish(self.client, topic, data)
+    }
+
+    fn subscribe(&self, topic: &str) -> Result<()> {
+        unsafe {
+            let topic_cstr = CString::new(topic)?;
+            let result = esp_mqtt_client_subscribe_single(self.client, topic_cstr.as_ptr(), 1);
+            if result == -1 {
+                Err(anyhow!("Failed to subscribe to topic: {}", topic))
+            } else {
+                info!("Subscribed to: {}", topic);
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Drop for SimpleMqttClient {
+    fn drop(&mut self) {
+        unsafe {
+            esp_mqtt_client_stop(self.client);
+            esp_mqtt_client_destroy(self.client);
+        }
+    }
+}
+
+// Fungsi baru untuk mendapatkan waktu real-time dalam format string (YYYY-MM-DD HH:MM:SS)
+fn get_formatted_time() -> String {
+    unsafe {
+        let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
+        gettimeofday(&mut tv, core::ptr::null_mut());
+
+        let mut tm_val = tm {
+            tm_sec: 0,
+            tm_min: 0,
+            tm_hour: 0,
+            tm_mday: 0,
+            tm_mon: 0,
+            tm_year: 0,
+            tm_wday: 0,
+            tm_yday: 0,
+            tm_isdst: 0,
+        };
+
+        localtime_r(&tv.tv_sec, &mut tm_val);
+
+        format!(
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+            tm_val.tm_year + 1900,
+            tm_val.tm_mon + 1,
+            tm_val.tm_mday,
+            tm_val.tm_hour,
+            tm_val.tm_min,
+            tm_val.tm_sec
+        )
+    }
+}
+
+fn send_telemetry(mqtt_client: &SimpleMqttClient, distance: f32) -> Result<()> {
+    unsafe {
+        let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
+        gettimeofday(&mut tv, core::ptr::null_mut());
+        let timestamp = tv.tv_sec; // Waktu dalam detik sejak epoch
+        let payload = json!({
+            "water_level_distance": distance,
+            "timestamp": timestamp,
+            "realtime_clock": get_formatted_time(),  // Sudah dalam WIB setelah TZ diatur
+        })
+        .to_string();
+        mqtt_client.publish(OTA_TELEMETRY_TOPIC, &payload)?;
+        info!("Data sent to ThingsBoard: {}", payload);
+        Ok(())
+    }
+}
+
+fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> Result<()> {
+    let ssid = "SkyNet";
+    let password = "20201908";
+    let wifi_config = Configuration::Client(ClientConfiguration {
+        ssid: HeaplessString::try_from(ssid).unwrap(),
+        password: HeaplessString::try_from(password).unwrap(),
+        auth_method: AuthMethod::WPA2Personal,
+        ..Default::default()
+    });
+    wifi.set_configuration(&wifi_config)?;
+    wifi.start()?;
+    wifi.connect()?;
+    wifi.wait_netif_up()?;
+    let ip_info = wifi.wifi().sta_netif().get_ip_info()?;
+    info!("WiFi Connected, IP: {}", ip_info.ip);
+    Ok(())
+}
+
+fn read_water_level(
+    trigger: &mut PinDriver<'_, Gpio11, Output>,
+    echo: &mut PinDriver<'_, Gpio12, Input>,
+) -> f32 {
+    let _ = trigger.set_low();
+    Ets::delay_us(2);
+    let _ = trigger.set_high();
+    Ets::delay_us(10);
+    let _ = trigger.set_low();
+
+    let wait_start = unsafe { esp_timer_get_time() };
+    while echo.is_low() {
+        if unsafe { esp_timer_get_time() - wait_start } > 100_000 {
+            return 0.0;
+        }
+    }
+
+    let start = unsafe { esp_timer_get_time() };
+    while echo.is_high() {
+        if unsafe { esp_timer_get_time() - start } > 25_000 {
+            return 0.0;
+        }
+    }
+    let end = unsafe { esp_timer_get_time() };
+
+    let duration_us = (end - start) as f32;
+    let distance = duration_us * 0.0343 / 2.0;
+
+    if distance < 2.0 || distance > 400.0 {
+        0.0
+    } else {
+        distance
+    }
+}
+
+#[no_mangle]
+fn main() -> i32 {
+    esp_idf_sys::link_patches();
+    EspLogger::initialize_default();
+    info!("Ultrasonic sensor mulai membaca program Wi-Fi, MQTT, dan OTA...");
+
+    // Pengaturan timezone untuk WIB (UTC+7)
+    unsafe {
+        let tz = CString::new("WIB-7").unwrap(); // WIB = UTC+7
+        setenv(CString::new("TZ").unwrap().as_ptr(), tz.as_ptr(), 1);
+        tzset();
+    }
+    info!("Timezone set to WIB (UTC+7)");
+
+    let peripherals = match Peripherals::take() {
+        Ok(peripherals) => peripherals,
+        Err(e) => {
+            error!("Failed to take peripherals: {:?}", e);
+            return -1;
+        }
+    };
+    let sys_loop = match EspSystemEventLoop::take() {
+        Ok(sys_loop) => sys_loop,
+        Err(e) => {
+            error!("Failed to take system event loop: {:?}", e);
+            return -1;
+        }
+    };
+    let nvs = match EspDefaultNvsPartition::take() {
+        Ok(nvs) => nvs,
+        Err(e) => {
+            error!("Failed to take NVS partition: {:?}", e);
+            return -1;
+        }
+    };
+    let esp_wifi = match EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs)) {
+        Ok(wifi) => wifi,
+        Err(e) => {
+            error!("Failed to initialize EspWifi: {:?}", e);
+            return -1;
+        }
+    };
+    let mut wifi = match BlockingWifi::wrap(esp_wifi, sys_loop) {
+        Ok(wifi) => wifi,
+        Err(e) => {
+            error!("Failed to wrap EspWifi into BlockingWifi: {:?}", e);
+            return -1;
+        }
+    };
+
+    if let Err(e) = connect_wifi(&mut wifi) {
+        error!("Gagal Koneksi ke WiFi: {:?}", e);
+        return -1;
+    }
+
+    // Tambahan: Inisialisasi SNTP untuk sync RTC dengan NTP server
+    info!("Initializing SNTP for Real-Time Clock");
+    let ntp = match EspSntp::new_default() {
+        Ok(ntp) => ntp,
+        Err(e) => {
+            error!("Failed to initialize SNTP: {:?}", e);
+            return -1;
+        }
+    };
+    let mut delay = Delay::new(100);
+    while ntp.get_sync_status() != SyncStatus::Completed {
+        info!("Waiting for time synchronization...");
+        delay.delay_ms(1000);
+    }
+    info!("Real-Time Clock synchronized with NTP, time: {}", get_formatted_time());
+
+    let trigger_pin = peripherals.pins.gpio11;
+    let mut trigger = match PinDriver::output(trigger_pin) {
+        Ok(trigger) => trigger,
+        Err(e) => {
+            error!("Gagal Konfigurasi GPIO11 (trigger): {:?}", e);
+            return -1;
+        }
+    };
+    let echo_pin = peripherals.pins.gpio12;
+    let mut echo = match PinDriver::input(echo_pin) {
+        Ok(echo) => echo,
+        Err(e) => {
+            error!("Gagal Konfigurasi GPIO12 (echo): {:?}", e);
+            return -1;
+        }
+    };
+    info!("GPIO11 (trigger) and GPIO12 (echo) configured for ultrasonic sensor");
+
+    info!("Koneksi ke MQTT broker...");
+    let mut ota_manager = Box::new(OtaManager::new());
+    let ota_manager_ptr = &mut *ota_manager as *mut OtaManager;
+
+    let mqtt_client = match SimpleMqttClient::new(
+        "mqtt://mqtt.thingsboard.cloud:1883",
+        "shelmais",
+        "shelma118",
+        "ghhaay0h3x6w5sipos0f",
+        ota_manager_ptr,
+    ) {
+        Ok(client) => {
+            info!("Connected to ThingsBoard MQTT broker");
+            if let Err(e) = client.subscribe("v1/devices/me/attributes/response/+") {
+                error!("Failed to subscribe to OTA response: {:?}", e);
+            }
+            if let Err(e) = client.subscribe("v1/devices/me/attributes") {
+                error!("Failed to subscribe to attributes: {:?}", e);
+            }
+            if let Err(e) = client.subscribe("v2/fw/response/+/chunk/+") {
+                error!("Failed to subscribe to firmware response: {:?}", e);
+            }
+            client
+        }
+        Err(e) => {
+            error!("Failed to connect to MQTT: {:?}", e);
+            return -1;
+        }
+    };
+
+    if let Err(e) = ota_manager.request_firmware_info(mqtt_client.client) {
+        error!("Failed to request firmware info: {:?}", e);
+    }
+
+    let mut counter = 0;
+    let mut ota_check_counter = 0;
+    loop {
+        counter += 1;
+        ota_check_counter += 1;
+        if ota_check_counter >= 6 && ota_manager.ota_state == OtaState::Idle {
+            ota_check_counter = 0;
+            if let Err(e) = ota_manager.request_firmware_info(mqtt_client.client) {
+                error!("Failed to request firmware info: {:?}", e);
+            }
+        }
+
+        let distance = read_water_level(&mut trigger, &mut echo);
+        if distance > 0.0 {
+            let distance_cm = Distance(distance);
+            info!("=== Reading {} ===", counter);
+            info!("�� Jarak: {:.2} cm", distance_cm.as_f32());
+            if let Err(e) = send_telemetry(&mqtt_client, distance_cm.as_f32()) {
+                error!("Gagal Mengirim ke telemetry: {:?}", e);
+            }
+        } else {
+            error!("❌ Pembacaan Sensor Tidak Valid");
+            info!("�� Segera Check:");
+            info!("   - Koneksi Sensor ke GPIO11 (trigger) dan GPIO12 (echo)");
+            info!("   - Koneksi kabel aman");
+            info!("   - Sensor diluar jangkauan");
+        }
+
+        if ota_manager.ota_state != OtaState::Idle {
+            if let Err(e) = ota_manager.send_ota_telemetry(mqtt_client.client) {
+                error!("Gagal Mengirim ke OTA telemetry: {:?}", e);
+            }
+        }
+
+        delay.delay_ms(3000);
+    }
+}   
+\end{lstlisting}
+
+\section{Cargo.toml}
+\begin{lstlisting}[language=bash,caption={Cargo.toml}]
+cargo.toml
+[package]
+name = "shelmais"
+version = "0.1.0"
+authors = ["shelmasabila"]
+edition = "2021"
+resolver = "2"
+rust-version = "1.77"
+
+[[bin]]
+name = "shelmais"
+harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true
+opt-level = "z"
+
+[features]
+default = []
+experimental = ["esp-idf-svc/experimental"]
+
+[dependencies]
+log = "0.4"
+esp-idf-svc = { version = "0.51", features = ["std"] }
+esp-idf-sys = { version = "0.36", features = ["binstart", "std"] }
+esp-idf-hal = "0.45"
+anyhow = "1.0"
+heapless = "0.8"
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+onewire = "0.4.0"
+embedded-hal = "1.0"
+
+[build-dependencies]
+embuild = "0.33"
+
+[patch.crates-io]
+embedded-hal = { git = "https://github.com/rust-embedded/embedded-hal", branch = "master" }
+\end{lstlisting}
+
+\section{Payload.JSON}
+\begin{lstlisting}[language=bash,caption={Payload.JSON}]
+Payload JSON
+fn send_telemetry(mqtt_client: &SimpleMqttClient, distance: f32) -> Result<()> {
+    unsafe {
+        let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
+        gettimeofday(&mut tv, core::ptr::null_mut());
+        let timestamp = tv.tv_sec; // Waktu dalam detik sejak epoch (UNIX timestamp)
+        let payload = json!({
+            "water_level_distance": distance,
+            "timestamp": timestamp,
+            "realtime_clock": get_formatted_time(),  // Format string: "YYYY-MM-DD HH:MM:SS" (lokal WIB)
+        })
+        .to_string();  // <-- INI YANG MEMBUAT STRING JSON
+        mqtt_client.publish(OTA_TELEMETRY_TOPIC, &payload)?;  // Kirim ke topic "v1/devices/me/telemetry"
+        info!("Data sent to ThingsBoard: {}", payload);
+        Ok(())
+    }
+}
+\end{lstlisting}
+
+\section{Skrip Gnuplot}
+\begin{lstlisting}[language=bash,caption={Skrip Gnuplot}]
+Gnuplot
+gnuplot> set ydata time
+gnuplot> set timefmt "%m/%d/%Y %H:%M"
+gnuplot> set format y "%H:%M\n%m-%d"
+gnuplot> 
+gnuplot> plot "data fix.csv" using 2:(timecolumn(1, "%m/%d/%Y %H:%M")) with linespoints ls 1 title "Timestamp", \
+>     "" using 2:(timecolumn(3, "%m/%d/%Y %H:%M")) with linespoints ls 2 title "Realtime Clock"
+gnuplot> ### Konfigurasi dasar ###
+gnuplot> reset
+gnuplot> set datafile separator ","
+gnuplot> set term qt font "Helvetica,11" size 1000,600
+
+Terminal type is now 'qt'
+Options are '0 size 1000, 600 font "Helvetica,11"'
+gnuplot> set title "Perbandingan Timestamp dan Realtime Clock terhadap Level" font "Helvetica-Bold,12"
+gnuplot> set grid lc rgb "#dddddd" lw 1
+gnuplot> 
+gnuplot> ### Sumbu dan format ###
+gnuplot> set xdata time
+gnuplot> set timefmt "%m/%d/%Y %H:%M"
+gnuplot> set format x "%H:%M\n%m-%d"
+gnuplot> set xlabel "Waktu" font "Helvetica,11"
+gnuplot> set ylabel "Level" font "Helvetica,11"
+gnuplot> set key outside top center horizontal box lc rgb "#888888"
+gnuplot> 
+gnuplot> ### Style garis (lebih kontras & lembut) ###
+gnuplot> set style line 1 lc rgb "#4F81BD" lw 3 pt 7 ps 0.6   # Biru lembut untuk Timestamp
+gnuplot> set style line 2 lc rgb "#E67E22" lw 3 dashtype 2 pt 9 ps 0.8   # Oranye lembut, garis putus-putus
+gnuplot> set style increment user
+                             ^
+         warning: deprecated command
+gnuplot> 
+gnuplot> ### Area plot ###
+gnuplot> set border lw 1 lc rgb "#888888"
+gnuplot> set xtics font "Helvetica,10" textcolor rgb "#555555"
+gnuplot> set ytics font "Helvetica,10" textcolor rgb "#555555"
+gnuplot> 
+gnuplot> ### Plot ###
+gnuplot> plot "data fix.csv" using (timecolumn(1, "%m/%d/%Y %H:%M")):2 with linespoints ls 1 title "Timestamp", \
+>     "" using (timecolumn(3, "%m/%d/%Y %H:%M")):2 with linespoints ls 2 title "Realtime Clock"
+\end{lstlisting}
+
+% ==========================================================
+\chapter{HASIL DAN PEMBAHASAN}
+
+\section{Hasil Pengujian pada Visual Studio Code}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\textwidth]{Terminal.jpg}
+  \label{fig:diagram}
+    \caption{Hasil ./flash.sh atau Run Program Rust ESP pada Terminal}
+\end{figure}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Berdasarkan hasil pengujian proses esp.flash pada ESP32-S3 yang ditampilkan melalui terminal Visual Studio Code, terlihat bahwa sistem berhasil melakukan proses pembacaan data sensor dan pengunduhan firmware secara bertahap melalui mekanisme chunk-based transfer. Log menunjukkan bahwa perangkat mampu mempublikasikan dan menerima pesan MQTT secara berurutan untuk setiap potongan data firmware (chunk) dengan ukuran tertentu, serta mengirimkan data telemetry seperti jarak air dan waktu pembacaan ke ThingsBoard Cloud secara real-time. Proses pembaruan firmware ditandai dengan status DOWNLOADING, di mana setiap chunk diterima, diakumulasi, dan diverifikasi hingga seluruh data firmware selesai diunduh. Hasil ini menunjukkan bahwa fungsi flash dan OTA pada ESP32-S3 bekerja dengan baik, memiliki kemampuan komunikasi dua arah yang stabil melalui MQTT, serta dapat melakukan update firmware secara remote tanpa gangguan, yang menegaskan keandalan sistem dalam mendukung pemeliharaan perangkat IoT secara efisien dan aman.
+
+\section{Hasil Pengujian dalam Thingsboard}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\textwidth]{OTA update.jpg}
+  \label{fig:diagram}
+    \caption{OTA Update pada Thingsboard}
+\end{figure}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Berdasarkan hasil pengujian pada fitur OTA (Over-The-Air) update di platform ThingsBoard Cloud, terlihat bahwa sistem berhasil mengelola dan menyimpan beberapa versi paket firmware yang telah diunggah dengan format file .bin. Terdapat empat entri firmware dengan judul dan versi berbeda mulai dari shelmais2.0 hingga shelmais3.0 yang menunjukkan proses pembaruan firmware berjalan secara bertahap dan terdokumentasi dengan baik melalui kolom waktu pembuatan (created time) dan version tag. Hal ini menandakan bahwa mekanisme OTA pada sistem berfungsi sesuai tujuan, yaitu memungkinkan pembaruan firmware perangkat ESP32-S3 dari jarak jauh tanpa intervensi fisik. Dengan status paket yang aktif serta keberhasilan unggahan beberapa versi firmware, dapat disimpulkan bahwa integrasi antara perangkat, ThingsBoard Cloud, dan sistem OTA berjalan dengan baik, stabil, serta mendukung peningkatan fleksibilitas dan efisiensi pemeliharaan sistem IoT secara real-time.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{Device profile.jpg}
+  \label{fig:diagram}
+    \caption{Device Profile pada Thingsboard}
+\end{figure}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Gambar tersebut menunjukkan tampilan halaman Device Profiles pada platform ThingsBoard Cloud, di mana pengguna dengan nama akun Shelma Sabila telah membuat profil perangkat bernama "shelmais". Profil ini berfungsi sebagai template konfigurasi yang menentukan parameter komunikasi, aturan data, serta pengaturan dashboard untuk perangkat IoT yang terhubung. Status sistem di bagian atas menunjukkan kondisi "Active (Action required)", yang menandakan bahwa langganan masih aktif namun memerlukan tindakan tambahan, seperti verifikasi atau pembaruan konfigurasi. Dengan adanya device profile ini, setiap perangkat yang terhubung dapat menggunakan pengaturan yang sama secara konsisten, sehingga mempermudah proses integrasi, pemantauan, dan pengelolaan data sensor melalui ThingsBoard Cloud.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\textwidth]{Devices 2 (1).jpg}
+  \label{fig:diagram}
+    \caption{Devices pada Thingsboard}
+\end{figure}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Gambar tersebut menampilkan tampilan halaman Devices pada platform ThingsBoard Cloud, di mana perangkat bernama “shelmais” sedang dipantau melalui tab Latest Telemetry. Dari data yang terlihat, perangkat ini memiliki beberapa parameter penting seperti current\_fw\_title dengan nilai Water Level Sensor, current\_fw\_version versi V1.0, fw\_state dengan status UPDATING, serta realtime\_clock yang menunjukkan waktu pembaruan terakhir yaitu 2025-10-14 12:37:14. Informasi tersebut menunjukkan bahwa perangkat “shelmais” berfungsi sebagai sensor ketinggian air (water level sensor) dan sedang menjalani proses pembaruan firmware secara aktif. Data telemetry yang tercatat juga menandakan bahwa koneksi antara perangkat fisik (misalnya ESP32 atau mikrokontroler lain) dan platform cloud berjalan dengan baik, memungkinkan ThingsBoard untuk menerima data real-time serta status sistem dari perangkat tersebut.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{Data tabel.jpg}
+  \label{fig:diagram}
+    \caption{Hasil Pembacaan Data Table pada Dashboard Thingsboard}
+\end{figure}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Gambar tersebut menunjukkan tampilan Timeseries Table pada dashboard ThingsBoard Cloud, yang menampilkan data pembacaan sensor secara real-time. Berdasarkan tabel, nilai Level yang terukur adalah 8 cm secara konsisten pada setiap pembacaan dengan interval waktu yang sangat rapat, sekitar 2–3 detik antara setiap data. Hal ini menunjukkan bahwa sensor level air bekerja secara stabil dan menghasilkan data yang konstan tanpa adanya fluktuasi signifikan selama periode pengamatan. Kolom realtime\_clock yang sejalan dengan timestamp menandakan bahwa sinkronisasi waktu antara RTC (Real Time Clock) di perangkat dan waktu server cloud berjalan dengan baik. Dari hasil ini dapat disimpulkan bahwa sistem pengiriman data dari sensor ke ThingsBoard melalui jaringan MQTT berfungsi optimal, dengan latensi rendah dan keandalan tinggi dalam pelaporan level air secara kontinu.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{Data grafik.jpg}
+  \label{fig:diagram}
+    \caption{Hasil Pembacaan Data Grafik pada Dashboard Thingsboard}
+\end{figure}
+% --- Spacing Adjustments ---
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Berdasarkan hasil pembacaan grafik level pada dashboard ThingsBoard Cloud, terlihat bahwa nilai level air berada pada kisaran 7 cm dengan rata-rata pembacaan yang stabil dan fluktuasi yang sangat kecil selama periode waktu 19:54:05 hingga 19:55:00. Garis grafik yang cenderung datar menunjukkan bahwa sensor ultrasonik berfungsi dengan baik dan mampu menjaga konsistensi pengukuran tanpa adanya gangguan signifikan seperti noise atau lonjakan data. Stabilitas ini mengindikasikan bahwa sistem pengukuran dan komunikasi data dari perangkat ke cloud berjalan normal, serta koneksi MQTT antara ESP32-S3 dan ThingsBoard bekerja dengan baik dalam mentransmisikan data level secara real-time.
+
+\section{Latency Analysis IoT Data Streaming}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth]{Grafik Perbandingan.jpg}
+  \label{fig:diagram}
+    \caption{Latency Analysis IoT Data Streaming}
+\end{figure}
+\usepackage            % Untuk line spacing
+\setstretch{1.5}       % Ubah nilai ini: 1.0 = single, 1.5 = 1.5x, 2.0 = double spacing
+
+% Untuk paragraph spacing: tambahkan jarak antar paragraf tanpa menghapus indentasi
+\setlength{\parskip}{0.5  em}  % Jarak antar paragraf (ubah 1em menjadi nilai lain, e.g., 0.5em atau 12pt)
+
+Berdasarkan grafik yang memperlihatkan hubungan level terhadap timestamp dan realtime clock, tampak terdapat perbedaan waktu antara kedua sumbu (latency) di mana nilai level yang sama tidak berada pada titik waktu yang persis sama antara kedua plot tersebut. Dari grafik tersebut menunjukkan bahwa perbandingan antara Timestamp dan Realtime Clock terhadap nilai Level selama akhir September hingga pertengahan Oktober pada umumnya sangat konsisten, dengan kedua garis yang hampir berhimpitan sehingga latensi antara pencatatan waktu internal dan waktu nyata perangkat biasanya sangat kecil, pada rentang milidetik hingga beberapa detik saja. Namun, pada beberapa titik terdapat lonjakan atau spike di sekitar 1, 8, 12, dan 15 Oktober, yang menandakan momen terjadinya gangguan sinkronisasi atau keterlambatan pencatatan data. Pada fase awal periode pengamatan, latensi cenderung lebih tinggi namun membaik pada pertengahan dan akhir periode, dengan sesekali terjadi deviasi yang menyebabkan puncak data.
+
+Latensi bisa terjadi akibat delay selama pengiriman data, pemrosesan oleh sistem, atau pelambatan komunikasi saat data dikirimkan dari sensor ke sistem pencatatan. Selain itu, kemungkinan adanya perbedaan antara waktu dari modul real-time clock (RTC) dengan waktu yang dicatat pada timestamp internal sistem, bisa memperburuk deviasi waktu, terutama saat proses sinkronisasi tidak berjalan mulus. Dari literatur, fluktuasi latensi sesaat juga pernah dilaporkan, umumnya rata-rata selisih waktu antara RTC dan waktu aktual masih dalam kisaran 1 hingga 3 detik, namun bisa lebih besar jika terjadi gangguan teknis atau rekonfigurasi perangkat. Kesimpulannya, sistem ini pada dasarnya cukup andal dan sinkron, tetapi tetap berpotensi mengalami spike latensi secara insidental, seiring adanya faktor eksternal maupun internal yang memengaruhi transfer serta sinkronisasi data.
+
+% ==========================================================
+\chapter{KESIMPULAN DAN SARAN}
+\section{Kesimpulan}
+\begin{enumerate}[label=\arabic*.]
+    \item Proses ESP flash dan OTA update pada ESP32-S3 berhasil dilakukan secara bertahap melalui mekanisme chunk-based transfer, menunjukkan bahwa perangkat mampu berkomunikasi dua arah dengan ThingsBoard Cloud secara stabil melalui protokol MQTT dan mendukung pembaruan firmware jarak jauh tanpa gangguan.
+    \item ThingsBoard Cloud berfungsi optimal dalam mengelola, menyimpan, dan mendistribusikan beberapa versi firmware (.bin) secara terorganisir, menandakan sistem OTA mampu mendukung pembaruan perangkat dengan fleksibel dan efisien untuk pemeliharaan sistem IoT secara real-time.
+    \item Data dari sensor level air menunjukkan kestabilan pembacaan di kisaran 7–8 cm dengan interval waktu yang konsisten, serta sinkronisasi waktu antara realtime clock perangkat dan timestamp server berjalan baik, menandakan pengiriman data berlangsung dengan latensi rendah.
+    \item Perangkat dan device profile yang terhubung melalui ThingsBoard bekerja sesuai konfigurasi, menghasilkan data telemetry yang teratur serta grafik pengukuran yang stabil, membuktikan integrasi sistem antara ESP32-S3 dan platform cloud berjalan dengan baik dan andal.
+    \item Terdapat sedikit perbedaan waktu antara timestamp dan realtime clock akibat faktor komunikasi atau sinkronisasi, namun deviasi yang muncul masih dalam batas wajar (1 hingga 3 detik), menunjukkan sistem tetap handal dan responsif dalam pengiriman data sensor ke platform cloud.
+\end{enumerate}
+
+\section{Saran}
+\begin{enumerate}[label=\arabic*.]
+    \item Perlu dilakukan sinkronisasi otomatis antara RTC perangkat dan server agar data memiliki waktu pencatatan yang akurat dan latensi dapat diminimalkan.
+    \item Disarankan untuk menambahkan enkripsi serta verifikasi integritas firmware guna memastikan proses pembaruan jarak jauh berjalan aman dan bebas dari korupsi data.
+    \item Perlu dilakukan uji performa sistem pada berbagai kondisi jaringan untuk memastikan stabilitas komunikasi MQTT dan ketahanan sistem dalam situasi nyata.
+\end{enumerate}
+
+% ==========================================================
+\chapter{DAFTAR PUSTAKA}
+\begin{enumerate}
+    \item Hastings, S., Mildenhall, J., Sinclair, K., Guy, E. F. S., Clifton, J. A., Hill, J. F., Su, Y., \& Chase, J. G. (2025). Respiratory pressure and flow data collection device providing a framework for closed-loop mechanical ventilation. \textit{HardwareX, 23}, e00671. https://doi.org/10.1016/j.ohx.2025.e00671
+    \item Zhu, S., Zhang, Z., Qin, B., Xiong, A., \& Song, L. (2022). Learning and programming challenges of Rust: A mixed-methods study. \textit{In Proceedings of the 44th International Conference on Software Engineering (ICSE ’22), Pittsburgh, PA, USA}. ACM. https://doi.org/10.1145/3510003.3510164
+    \item Oey, K. A. S., Kwee, C., Chua, W., Nabiilah, G. Z., \& Rojalia. (2023). Rust’s memory safety model: An evaluation of its effectiveness in preventing common vulnerabilities. \textit{Procedia Computer Science, 227}, 119–127. https://doi.org/10.1016/j.procs.2023.10.509
+    \item Praveen, M., \& Almobaideen, W. (2023). The current state of research on malware written in the Rust programming language. \textit{In Proceedings of the 2023 International Conference on Information Technology (ICIT)}. IEEE. https://doi.org/10.1109/ICIT58056.2023.10226157
+    \item Olisa, S. C., Asiegbu, C. N., Olisa, J. E., Ekengwu, B. O., Shittu, A. A., \& Eze, M. C. (2021). Smart two-tank water quality and level detection system via IoT. \textit{Heliyon, 7}(7), e07651. https://doi.org/10.1016/j.heliyon.2021.e07651
+    \item Khan, A. N., Rizwan, A., Ahmad, R., \& Kim, D. H. (2023). An OCF-IoTivity enabled smart-home optimal indoor environment control system for energy and comfort optimization. \textit{Internet of Things, 22}, 100712. https://doi.org/10.1016/j.iot.2023.100712
+    \item Islam, K. Z., Murray, D., Diepeveen, D., Jones, M. G. K., \& Sohel, F. (2025). Deep learning based payload optimization for image transmission over LoRa with HARQ. \textit{Internet of Things, 33}, 101701. https://doi.org/10.1016/j.iot.2025.101701
+    \item Ali, M., Saleem, Y., Hina, S., \& Shah, G. A. (2025). DDoSViT: IoT DDoS attack detection for fortifying firmware over-the-air (OTA) updates using vision transformer. \textit{Internet of Things, 30}, 101527. https://doi.org/10.1016/j.iot.2025.101527
+    \item Sahlan, S., Rosli, K. I., Nik Nazaruddin, N. M. A. H., Jamali, A., Yunus, M. A. M., \& Abdul Manaf, M. S. (2024). Remote automated control and monitoring water distribution system utilizing a 3-way valve logic on ThingsBoard platform. \textit{In Proceedings of the 2024 IEEE 10th International Conference on Smart Instrumentation, Measurement and Applications (ICSIMA)}. IEEE. https://doi.org/10.1109/ICSIMA62563.2024.10675566
+    \item Hamza, A. S., Tashakkori, R., Underwood, B., O’Brien, W., \& Campell, C. (2023). BeeLive: The IoT platform of Beemon monitoring and alerting system for beehives. \textit{Smart Agricultural Technology, 6}, 100331. https://doi.org/10.1016/j.atech.2023.100331
+    \item de Sousa, M. J. B., Gomez Gonzalez, L. F., Ferdinando, E. P., \& Borin, J. F. (2022). Over-the-air firmware update for IoT devices on the wild. \textit{Internet of Things, 19}, 100578.
+    \item Chang, C.-H., Rahmad, R., Wu, S.-J., Hsu, C.-T., \& Chung, P.-H. (2024). Enhancing flood verification using Signal Detection Theory (SDT) and IoT sensors: A spatial scale evaluation. \textit{Journal of Hydrology, 636}, 131308.
+    \item Rodríguez-Muñoz, J. D., Tlelo-Cuautle, E., \& de la Fraga, L. G. (2025). Chaos-based authentication of encrypted images under MQTT for IoT protocol. \textit{Integration, the VLSI Journal, 102}, 102378.
+    \item Kashyap, M., Dev, A. K., \& Sharma, V. (2024). Implementation and analysis of EMQX broker for MQTT protocol in the Internet of Things. \textit{e-Prime - Advances in Electrical Engineering, Electronics and Energy, 10}, 100846.
+    \item Mohd Jais, N. A., Abdullah, A. F., Mohd Kassim, M. S., Abd Karim, M. M., Abdulsalam, M., \& Muhadi, N. A. (2024). Improved accuracy in IoT-based water quality monitoring for aquaculture tanks using low-cost sensors: Asian seabass fish farming. \textit{Heliyon, 10}, e29022.
+    \item Kabi, J. N., wa Maina, C., Mharakurwa, E. T., \& Mathenge, S. W. (2023). Low cost, LoRa based river water level data acquisition system. \textit{HardwareX, 14}, e00414.
+    \item Olisa, S. C., Asiegbu, C. N., Olisa, J. E., Ekengwu, B. O., Shittu, A. A., \& Eze, M. C. (2021). Smart two-tank water quality and level detection system via IoT. \textit{Heliyon, 7}(7), e07651.
+    \item Cherif, I., Cherqui, F., Perret, F., Bourjaillat, B., Lord, L., Bertrand-Krajewski, J.-L., Walcker, N., Gisi, M., Bacot, L., \& Navratil, O. (2025). LevelWAN: A cost-effective, open-source IoT system for water level monitoring in highly dynamic aquatic environments. \textit{HardwareX, 23}, e00685.
+    \item Moravskyi, R., \& Levus, Y. (2024). Using stream processing for real-time clock drift correction in distributed data processing systems. \textit{Proceedings of the 19th International Conference on Computer Science and Information Technologies (CSIT)}.
+    \item Zarei, M., Ledziński, A., Bober, M., Zawada, M., \& Morzyński, P. (2022). Automatic real-time control of magnetic field in an optical atomic clock. \textit{Proceedings of the Joint Conference of the European Frequency and Time Forum and IEEE International Frequency Control Symposium (EFTF/IFCS)}.
+\end{enumerate}
+
+
+% ==========================================================
+
+\end{document}
